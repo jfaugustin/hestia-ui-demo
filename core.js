@@ -19,14 +19,36 @@ function kp(name,val,note){return '<div class="kpi"><div class="label">'+name+'<
 
 
 
-function roomview(){return header("Rooms","Room inventory and readiness. Select a room to update its status.")+panel("Room status — Sample floor inventory",'<div class="roomgrid">'+state.rooms.map(r=>'<button class="room '+(r.status==="occupied"?"occupied":r.status==="dirty"?"dirty":r.status==="out"?"out":"")+'" onclick="cycleRoom('+r.id+')">'+r.id+'<small>'+safe(r.status)+'</small></button>').join("")+'</div><p class="tiny" style="margin-top:17px">Demonstration only. Rooms rotate through ready, occupied, dirty, and out of order.</p>')}
-function housekeeping(){return header("Housekeeping","Inspect and turn over rooms for the next arrival.")+panel("Rooms awaiting turnover",state.rooms.filter(r=>r.status==="dirty").map(r=>'<div class="line"><div><strong>Room '+r.id+'</strong><div class="tiny">Dirty · Inspection pending</div></div><button class="secondary" onclick="markReady('+r.id+')">Mark ready</button></div>').join("")||'<div class="empty">All demo rooms are ready.</div>')+ '<div class="section">'+panel("Housekeeping progress",row("Rooms ready",state.rooms.filter(r=>r.status==="ready").length+" in sample inventory","Complete")+row("Rooms occupied",state.rooms.filter(r=>r.status==="occupied").length+" in sample inventory","In progress"))+'</div>'}
-
 function security(){return header("Security","Record and track hotel safety incidents.",'<button class="primary" onclick="openIncident()">+ New incident</button>')+panel("Incident log",state.incidents.map(i=>'<div class="line"><div><strong>'+safe(i.title)+'</strong><div class="tiny">Incident #'+i.id+' · '+safe(i.location)+'</div></div><div class="actions">'+pill(i.status)+(i.status!=="Complete"?btn("Resolve","resolveIncident("+i.id+")"):"")+'</div></div>').join(""))}
 
-function intelligence(){return header("Intelligence","Operational reporting and insight.")+'<div class="grid">'+kp("Occupancy","87.3%","Illustrative")+kp("Service Completion","92%","Illustrative")+kp("Guest Satisfaction","4.7/5","Illustrative")+kp("Room Readiness","96%","Illustrative")+'</div><div class="section">'+panel("Export demo data",'<p class="muted" style="margin-bottom:17px">Download the current synthetic reservation, service, security and room records.</p><button class="primary" onclick="exportDemo()">Export JSON</button>')+'</div>'}
-function workforce(){return header("Workforce","Departmental staffing and service coverage.")+panel("Department overview",row("Front Office","6 scheduled · AM/PM coverage","Complete")+row("Housekeeping","11 scheduled · Morning turnover","Complete")+row("Engineering","3 scheduled · On-call rotation","Complete")+row("Security","4 scheduled · 24-hour coverage","Complete"))}
-function render(){document.getElementById("nav").innerHTML=NAV.map(([n,g])=>'<button class="'+(page===n?"active":"")+'" data-page="'+n+'"><span class="glyph">'+g+'</span>'+n+'</button>').join("");document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>nav(b.dataset.page));let views={"Overview":overview,"Reservations":reservations,"Front Desk":desk,"Rooms":roomview,"Housekeeping":housekeeping,"Service Dispatch":services,"Security":security,"Financials":finances,"Intelligence":intelligence,"Workforce":workforce};document.getElementById("content").innerHTML=views[page]()+ '<div class="footer">HESTIA · Interactive demonstration only · Synthetic data · No live hotel services</div>'}
+function render(){
+ const navigation=document.getElementById("nav");
+ navigation.innerHTML=NAV.map(([n,g])=>'<button class="'+(page===n?"active":"")+'" data-page="'+n+'"><span class="glyph">'+g+'</span>'+n+'</button>').join("");
+ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>nav(b.dataset.page));
+ const views={"Overview":overview,"Reservations":reservations,"Front Desk":desk,"Service Dispatch":services,"Security":security,"Financials":finances};
+ let markup="";
+ if(page==="Reservation Detail")markup=detailPage();
+ else if(page==="Guests")markup=guestListing();
+ else if(["Rooms","Housekeeping","Intelligence","Workforce","Operations"].includes(page))markup="";
+ else markup=(views[page]||overview)();
+ document.getElementById("content").innerHTML=markup+'<div class="footer">HESTIA · Synthetic demonstration · No live hotel services</div>';
+ const search=document.getElementById("reservationSearch")||document.getElementById("guestSearch");
+ if(search)search.oninput=e=>{
+  reservationSearch=e.target.value;const cursor=e.target.selectionStart;render();
+  const next=document.getElementById("reservationSearch")||document.getElementById("guestSearch");
+  if(next){next.focus();next.setSelectionRange(cursor,cursor)}
+ };
+ if(page==="Service Dispatch"&&svcSelected===null){
+  const filter=document.getElementById("dxDept"),status=document.getElementById("dcStatus"),query=document.getElementById("dxSearch");
+  if(filter)filter.onchange=e=>{dxDepartment=e.target.value;render()};
+  if(status)status.onchange=e=>dcFilterSet(e.target.value);
+  if(query)query.oninput=e=>{
+   dxSearch=e.target.value;const cursor=e.target.selectionStart;render();
+   const next=document.getElementById("dxSearch");
+   if(next){next.focus();next.setSelectionRange(cursor,cursor)}
+  };
+ }
+}
 function modal(title,fields,done){document.getElementById("modalroot").innerHTML='<div class="modalbg" onclick="if(event.target===this)closeModal()"><div class="modal"><h2>'+title+'</h2><p class="muted">Demonstration data only</p><form id="newform"><div class="fields">'+fields+'</div><div class="modalactions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="submit" class="primary">Save</button></div></form></div></div>';document.getElementById("newform").onsubmit=e=>{e.preventDefault();done(new FormData(e.target))}}
 function field(label,name,type="text",extra=""){return '<label>'+label+'<input name="'+name+'" type="'+type+'" required '+extra+'></label>'}
 function closeModal(){document.getElementById("modalroot").innerHTML=""}
@@ -164,18 +186,6 @@ function finances(){
 };
 const originalResetDemo=resetDemo;
 function resetDemo(){if(!confirm("Reset all synthetic demo data?"))return;state=seed();enrichDemo();render();flash("Demo reset")};
-
-const renderOriginal=render;
-render=function(){
- if(page==="Reservation Detail"){document.getElementById("nav").innerHTML=NAV.map(([n,g])=>'<button class="'+(page===n?"active":"")+'" data-page="'+n+'"><span class="glyph">'+g+'</span>'+n+'</button>').join("");document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>nav(b.dataset.page));document.getElementById("content").innerHTML=detailPage()+'<div class="footer">HESTIA · Public synthetic-data demonstration · no real payments</div>';}
- else if(page==="Guests"){document.getElementById("nav").innerHTML=NAV.map(([n,g])=>'<button class="'+(page===n?"active":"")+'" data-page="'+n+'"><span class="glyph">'+g+'</span>'+n+'</button>').join("");document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>nav(b.dataset.page));document.getElementById("content").innerHTML=guestListing()+'<div class="footer">Synthetic guest records only</div>';}
- else renderOriginal();
- const search=document.getElementById("reservationSearch")||document.getElementById("guestSearch");
- if(search)search.oninput=e=>{const val=e.target.value;reservationSearch=val;const sel=e.target.selectionStart;render();let inp=document.getElementById("reservationSearch")||document.getElementById("guestSearch");inp?.focus();inp?.setSelectionRange?.(sel,sel)};
-}
-NAV.splice(2,0,["Guests","♧"]);
-enrichDemo();
-
 
 /* Hestia service ticket lifecycle: prototype-only; persistent in browser localStorage */
 const SVC_STATUS=["Open","Started","Stopped","Completed","Voided"];
@@ -672,24 +682,6 @@ function dcDetail(){
 }
 // Replace the nested legacy detail view and duplicate assignment panels.
 function services(){return svcSelected!==null?dcDetail():dcHome()}
-
-const dcOriginalRender=render;
-render=function(){
- dcOriginalRender();
- if(page!=="Service Dispatch"||svcSelected!==null)return;
- const query=document.getElementById("dxSearch");
- if(query)query.oninput=e=>{
-   dxSearch=e.target.value;
-   const cursor=e.target.selectionStart;
-   render();
-   const again=document.getElementById("dxSearch");
-   if(again){again.focus();again.setSelectionRange(cursor,cursor)}
- };
- const dept=document.getElementById("dxDept");
- if(dept)dept.onchange=e=>{dxDepartment=e.target.value;render()};
- const status=document.getElementById("dcStatus");
- if(status)status.onchange=e=>dcFilterSet(e.target.value);
-};
 
 dcStaffBootstrap();
 
