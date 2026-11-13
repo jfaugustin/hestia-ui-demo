@@ -2,7 +2,7 @@ const fs=require("node:fs");
 const vm=require("node:vm");
 const assert=require("node:assert/strict");
 const html=fs.readFileSync("index.html","utf8");
-const js=html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+const js=fs.readFileSync("core.js","utf8");
 assert.ok(js,"Inline demo JavaScript must exist");
 new vm.Script(js,{filename:"hestia-demo.js"});
 const elements={};
