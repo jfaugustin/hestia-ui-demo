@@ -10,6 +10,8 @@ on:
       - 'front-office.css'
       - 'app-shell.js'
       - 'app-shell.css'
+      - 'housekeeping.js'
+      - 'housekeeping.css'
       - 'sw.js'
       - '.github/workflows/deploy.yml'
       - 'tests/**'
@@ -35,6 +37,7 @@ jobs:
           node tests/demo-smoke.cjs
           node tests/front-office-smoke.cjs
           node tests/app-shell-smoke.cjs
+          node tests/housekeeping-smoke.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
