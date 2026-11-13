@@ -66,9 +66,9 @@ assert.ok(evaluate("state.tickets.find(t=>t.id==="+activeTicket+").completedAt")
 
 
 evaluate("nav('Front Desk')");
-assert.ok(elements.content.innerHTML.includes("Bell Service"),"Bell Service queue visible");
-assert.ok(elements.content.innerHTML.includes("Live Checkout"),"Live Checkout queue visible");
-assert.ok(elements.content.innerHTML.includes("Food Delivery"),"Food Delivery queue visible");
+assert.ok(elements.content.innerHTML.includes("Bell pickup"),"Bell service request visible");
+assert.ok(elements.content.innerHTML.includes("Live checkout"),"Live checkout request visible");
+assert.ok(elements.content.innerHTML.includes("IRD delivery"),"In-room dining delivery request visible");
 assert.ok(evaluate("state.tickets.filter(t=>t.requestType==='Bell Service').length")>=4);
 assert.ok(evaluate("state.tickets.filter(t=>t.requestType==='Live Checkout').length")>=4);
 assert.ok(evaluate("state.tickets.filter(t=>t.requestType==='Food Delivery').length")>=4);
