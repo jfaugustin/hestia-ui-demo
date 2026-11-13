@@ -122,4 +122,34 @@ const availableValet=evaluate("state.tickets.find(t=>t.team==='Valet'&&t.status=
 assert.equal(evaluate("dxAutoAssign("+availableValet+")"),true,"Auto-assign routes to available department staff");
 assert.equal(evaluate("state.tickets.find(t=>t.id==="+availableValet+").employeeId"),"em-105");
 
+
+evaluate("dxSetRole('dispatcher')");
+evaluate("nav('Service Dispatch')");
+evaluate("dcMainTab('Queue')");
+assert.ok(elements.content.innerHTML.includes("Service Dispatch"),"Simplified dispatch heading rendered");
+assert.ok(elements.content.innerHTML.includes("Awaiting acceptance"),"Queue displays actionable assignment count");
+assert.equal(evaluate("state.dxEmployees.filter(e=>e.team==='Guest Services').length"),2,"Guest Services has actual named employees");
+const cleanAssignTicket=evaluate("state.tickets.find(t=>t.team==='Guest Services'&&t.status==='Open').id");
+assert.equal(evaluate("dcOwner(state.tickets.find(t=>t.id==="+cleanAssignTicket+"))"),"Unassigned","Legacy generic team owner is not a person");
+evaluate("dcAssignModal("+cleanAssignTicket+")");
+assert.ok(elements.modal?.innerHTML?.includes("Assign ticket")||JSON.stringify(elements).includes("Assign ticket"),"Assignment dialog is accessible");
+const noStaffId=evaluate("state.tickets.find(t=>t.team==='Guest Services'&&t.id==="+cleanAssignTicket+").employeeId");
+assert.equal(noStaffId,null);
+assert.equal(evaluate("dxAssign("+cleanAssignTicket+",'em-120')"),true,"Named employee assignment works");
+assert.equal(evaluate("dcOwner(state.tickets.find(t=>t.id==="+cleanAssignTicket+"))"),"Jordan Scott","Queue shows employee name rather than internal ID");
+assert.equal(evaluate("dxAssign("+cleanAssignTicket+",'em-115')"),false,"Cross-department reassignment denied");
+evaluate("svcOpen("+cleanAssignTicket+")");
+assert.ok(elements.content.innerHTML.includes("Assignment and actions"),"Single assignment panel rendered");
+assert.ok(!elements.content.innerHTML.includes("Employee dispatch"),"Old duplicate assignment panel removed");
+assert.ok(elements.content.innerHTML.includes("Jordan Scott"),"Named assignee displayed in ticket");
+evaluate("nav('Service Dispatch')");
+evaluate("dcFilterSet('Completed')");
+assert.ok(elements.content.innerHTML.includes("Completed"),"Completed filter renders");
+evaluate("dcFilterSet('All')");
+assert.ok(elements.content.innerHTML.includes("Tickets"),"All status filter renders");
+evaluate("dcFilterSet('Active')");
+evaluate("dxSetRole('viewer')");
+assert.equal(evaluate("dxAssign("+cleanAssignTicket+",'em-120')"),false,"Even unchanged assignments require permission");
+evaluate("dxSetRole('dispatcher')");
+
 console.log("PASS: Hestia demo syntax, 11 views, 5 stay tabs, checkout gate, mock authorizations/captures/refunds.");
