@@ -147,6 +147,10 @@ function hkHandover(){
   save();closeModal();render();flash("Passdown saved");
  });
 }
+function hkOpenRoom(id){
+ if(!hkJob(id))return flash("Housekeeping record not found");
+ hkTab="Board";hkFilter="All";hkSearch=String(id);nav("Housekeeping");
+}
 function hkSetTab(v){if(["Board","Requests","Team","Passdown"].includes(v)){hkTab=v;render()}}
 function hkSetFilter(v){hkFilter=v;render()}
 function hkActions(j,r){
