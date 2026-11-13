@@ -17,11 +17,15 @@ The site is served as a static application from GitHub Pages. The entrypoint is 
 | `front-office.css` | Responsive Front Office service workspace |
 | `app-shell.js` | **One** nine-section navigation model, overview, shared Rooms inventory and Operations |
 | `app-shell.css` | Compact responsive design system |
-| `housekeeping.js` | Independent Housekeeping department: assignments, cleaning, inspections, guest requests, and passdowns |
+| `housekeeping.js` | Role-specific Housekeeping views, workload allocation, inspection checklists, guest preferences, Engineering holds, supplies, and passdowns |
 | `housekeeping.css` | Housekeeping-specific responsive workspace |
 | `sw.js` | Network-first navigation fallback for static shell only (no ticket data cached) |
 
 The app retains localStorage persistence for the original demonstration dataset. Existing synthetic records are preserved across releases until the user selects **Reset demo**. The reset action intentionally restores all sample records.
+
+## Housekeeping operational rules
+
+Housekeeping remains a standalone department. An attendant sees assigned rooms; a supervisor manages allocation and inspections; a manager additionally sees quality and supply tracking. Role selection is **preview-only** and is not authenticated. Room inventory tracks occupancy separately from each Housekeeping job’s cleaning and inspection state. A departure check-out creates a turnover, inspection requires recorded checklist completion, and blocking Engineering work prevents room release and Front Office check-in. Do Not Disturb and refused-service requests inhibit cleaning entry until documented clearance. Workload weights and priorities are illustrative rather than validated staffing targets.
 
 ## Engineering conventions
 
