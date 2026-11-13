@@ -49,6 +49,13 @@ function hkSeed(){
   if(!j.maintenanceBlocks)j.maintenanceBlocks=[];
   if(!j.serviceWindow)j.serviceWindow="";
  });
+ if(!state.hkSupplies)state.hkSupplies=[
+  {id:"linen-bath",name:"Bath towel sets",quantity:180,unit:"sets",reorderAt:45},
+  {id:"linen-bed",name:"Bed linen sets",quantity:130,unit:"sets",reorderAt:35},
+  {id:"amenities",name:"Guest amenity kits",quantity:220,unit:"kits",reorderAt:60},
+  {id:"cleaning",name:"Cleaning consumables",quantity:75,unit:"units",reorderAt:20}
+ ];
+ if(!Array.isArray(state.hkSupplyLog))state.hkSupplyLog=[];
  if(!Array.isArray(state.hkPassdowns))state.hkPassdowns=[];
  if(!state.hkDemoSeeded){
   state.hkPassdowns.push({at:new Date().toISOString(),shift:"AM → PM",author:"Demo supervisor",text:"Sample handover: verify late checkout rooms, outstanding turndown requests, and pending inspections."});
@@ -74,6 +81,7 @@ function hkUpdate(id,action,value=""){
   hkLog(job,"Assigned",employee.name);
  }else if(action==="Start"){
   if(job.stage!=="Assigned"||!job.assigneeId||closed){flash("Assign an attendant before starting");return false}
+  if(["Do Not Disturb","Refused service","Privacy requested"].includes(job.guestPreference)){flash("Guest preference blocks entry; supervisor must resolve the request first");return false}
   job.stage="In progress";job.startedAt=new Date().toISOString();hkLog(job,"Cleaning started",hkOwner(job));
  }else if(action==="Submit"){
   if(job.stage!=="In progress"){flash("Start cleaning before submitting");return false}
@@ -176,7 +184,7 @@ function hkOpenRoom(id){
  if(!hkJob(id))return flash("Housekeeping record not found");
  hkTab="Board";hkFilter="All";hkSearch=String(id);nav("Housekeeping");
 }
-function hkSetTab(v){if(["Board","Requests","Team","Passdown"].includes(v)){hkTab=v;render()}}
+function hkSetTab(v){if(["Board","Requests","Team","Passdown","Insights"].includes(v)){hkTab=v;render()}}
 function hkSetFilter(v){hkFilter=v;render()}
 function hkActions(j,r){return hkRoleActions(j,r)}
 
@@ -198,7 +206,7 @@ function hkBoard(){
   '<div class="hk-muted">'+safe(j.stage)+' · '+safe(hkOwner(j))+' · '+safe(occupancy)+' · '+safe(hkCleanliness(j))+'</div>'+
   '<div class="hk-muted">'+hkCredits(j)+' workload credits · '+(priority.arrival?"Next arrival "+safe(priority.arrival):"No upcoming arrival")+
   (restricted.out||restricted.active.length?" · Room release restricted":"")+'</div>'+
-  (j.holdReason?'<div class="hk-muted">Hold: '+safe(j.holdReason)+'</div>':"")+'</div><div class="hk-actions">'+hkActions(j,r)+'</div></div>';
+  (j.guestPreference?'<div class="hk-muted">Guest preference: '+safe(j.guestPreference)+'</div>':"")+(j.holdReason?'<div class="hk-muted">Hold: '+safe(j.holdReason)+'</div>':"")+'</div><div class="hk-actions">'+hkActions(j,r)+'</div></div>';
  }).join("");
  return '<div class="hk-card">'+controls+'<div class="hk-list">'+(items.length?body:'<div class="hk-empty">No rooms match these filters.</div>')+'</div></div>';
 }
@@ -238,7 +246,7 @@ function hkPage(){
  const leadership=hkIsLeader();
  const headerActions=leadership?'<button class="hk-btn primary" onclick="hkAutoAllocate()">Auto-allocate rooms</button><button class="hk-btn" onclick="hkServiceRequest()">+ Guest request</button>':
  '<button class="hk-btn primary" onclick="hkSetTab(\'Board\')">My room queue</button>';
- const tabs=leadership?[["Board","Room board"],["Requests","Guest requests"],["Team","Attendants"],["Passdown","Shift handover"]]:
+ const tabs=leadership?[["Board","Room board"],["Requests","Guest requests"],["Team","Attendants"],["Passdown","Shift handover"],...(hkRole==="Manager"?[["Insights","Insights & supplies"]]:[])]:
  [["Board","My rooms"],["Requests","Requests"]];
  if(!tabs.some(([v])=>v===hkTab))hkTab="Board";
  const visibleJobs=leadership?active:active.filter(j=>j.assigneeId===hkSelectedStaff);
@@ -249,7 +257,7 @@ function hkPage(){
  '<div><strong>'+held.filter(j=>leadership||j.assigneeId===hkSelectedStaff).length+'</strong><span>On hold</span></div>'+
  '<div><strong>'+requests.length+'</strong><span>Guest requests</span></div></div>'+
  '<div class="hk-tabs">'+tabs.map(([value,label])=>'<button class="'+(hkTab===value?"active":"")+'" onclick="hkSetTab(\''+value+'\')">'+label+'</button>').join("")+'</div>'+
- (hkTab==="Board"?hkBoard():hkTab==="Requests"?hkRequests():hkTab==="Team"?hkTeam():hkPassdown())+
+(hkTab==="Board"?hkBoard():hkTab==="Requests"?hkRequests():hkTab==="Team"?hkTeam():hkTab==="Passdown"?hkPassdown():hkInsights())+
  '<p class="hk-foot">Shared inventory · occupancy, cleaning, inspection and maintenance restrictions are tracked independently. Synthetic browser-local demonstration.</p></section>';
 }
 
@@ -357,6 +365,58 @@ function hkReportDefect(id){
   save();closeModal();render();flash("Engineering request #"+idNew+" created");
  });
 }
+
+function hkSetPreference(id){
+ if(!hkIsLeader())return flash("Supervisor access required");
+ const job=hkJob(id);if(!job)return;
+ modal("Guest preference · Room "+id,
+ '<label>Service preference<select name="preference">'+
+ ["None","Do Not Disturb","Refused service","Privacy requested"].map(x=>'<option value="'+safe(x)+'"'+((job.guestPreference||"None")===x?" selected":"")+'>'+safe(x)+'</option>').join("")+
+ '</select></label><label>Required note<input name="reason" required maxlength="400" placeholder="Guest instruction or follow-up details"></label>',
+ f=>{
+  const pref=String(f.get("preference")||"None"),note=String(f.get("reason")||"").trim();
+  if(!note||!["None","Do Not Disturb","Refused service","Privacy requested"].includes(pref))return flash("Document the change");
+  job.guestPreference=pref==="None"?"":pref;
+  if(pref!=="None"&&["Assigned","Unassigned"].includes(job.stage)){job.stage="On hold";job.holdReason=pref}
+  if(pref==="None"&&job.stage==="On hold"&&["Do Not Disturb","Refused service","Privacy requested"].includes(job.holdReason||"")){job.stage=job.assigneeId?"Assigned":"Unassigned";job.holdReason=""}
+  hkLog(job,"Guest preference updated",pref+" · "+note);
+  closeModal();render();
+ });
+}
+function hkSupplyAdjust(){
+ if(hkRole!=="Manager")return flash("Manager access required");
+ modal("Record supply movement",
+ '<label>Supply<select name="stock">'+state.hkSupplies.map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+' · '+x.quantity+' '+safe(x.unit)+'</option>').join("")+'</select></label>'+
+ '<label>Movement<select name="direction"><option value="consume">Consumed / issued</option><option value="receive">Received / replenished</option></select></label>'+
+ '<label>Quantity<input type="number" name="quantity" min="1" max="10000" required></label>'+
+ '<label>Reference / reason<input name="reason" required maxlength="250" placeholder="Delivery, floor supply, or issue"></label>',
+ f=>{
+  const stock=state.hkSupplies.find(x=>x.id===f.get("stock")),quantity=Number(f.get("quantity")),direction=String(f.get("direction")),reason=String(f.get("reason")||"").trim();
+  if(!stock||!Number.isInteger(quantity)||quantity<=0||quantity>10000||!reason||!["consume","receive"].includes(direction))return flash("Enter a valid supply movement");
+  if(direction==="consume"&&quantity>stock.quantity)return flash("Insufficient on-hand inventory");
+  stock.quantity+=direction==="receive"?quantity:-quantity;
+  state.hkSupplyLog.unshift({at:new Date().toISOString(),id:stock.id,quantity,direction,reason,actor:"Manager (demo)"});
+  activity("Housekeeping supplies · "+stock.name+" · "+direction+" "+quantity);
+  save();closeModal();render();
+ });
+}
+function hkInsights(){
+ const jobs=state.hkJobs,completed=jobs.filter(j=>j.stage==="Ready"&&j.inspectedAt),failed=jobs.flatMap(j=>j.history||[]).filter(h=>h.event==="Inspection failed").length;
+ const m=jobs.reduce((x,j)=>x+((j.stage==="Ready"||j.stage==="On hold")?0:hkCredits(j)),0);
+ const discrepancies=state.rooms.filter(r=>r.status==="occupied"&&!state.reservations.some(x=>Number(x.room)===Number(r.id)&&x.status==="Checked in"));
+ const rows='<div class="hk-card"><div class="hk-subtitle"><strong>Quality and workload</strong><span>Demo records</span></div>'+
+ '<div class="hk-item"><div><strong>Inspected rooms</strong><div class="hk-muted">'+completed.length+' recorded approvals</div></div></div>'+
+ '<div class="hk-item"><div><strong>Inspection corrections</strong><div class="hk-muted">'+failed+' failed checks</div></div></div>'+
+ '<div class="hk-item"><div><strong>Open workload</strong><div class="hk-muted">'+m+' cleaning credits across active rooms</div></div></div>'+
+ '<div class="hk-item"><div><strong>Occupancy reconciliation</strong><div class="hk-muted">'+discrepancies.length+' inventory/PMS mismatches in demo data · verify before action</div></div></div>'+
+ '<div class="hk-notice">Metrics reflect illustrative browser data. They do not measure staff performance or replace verified labor records.</div></div>';
+ const supplies='<div class="hk-card"><div class="hk-subtitle"><strong>Housekeeping supplies</strong><button class="hk-btn primary" onclick="hkSupplyAdjust()">Record movement</button></div>'+
+ state.hkSupplies.map(x=>'<div class="hk-item"><div><strong>'+safe(x.name)+'</strong><div class="hk-muted">'+x.quantity+' '+safe(x.unit)+' on hand · reorder at '+x.reorderAt+'</div></div>'+(x.quantity<=x.reorderAt?'<span class="hk-tag urgent">Low stock</span>':"")+'</div>').join("")+
+ '<div class="hk-subtitle" style="margin-top:12px"><strong>Recent movements</strong></div>'+
+ (state.hkSupplyLog||[]).slice(0,8).map(x=>'<div class="hk-note"><strong>'+safe(x.direction)+' · '+x.quantity+'</strong><div class="hk-muted">'+safe(x.reason)+' · '+svcTime(x.at)+'</div></div>').join("")+
+ '</div>';
+ return '<div class="hk-two">'+rows+supplies+'</div>';
+}
 function hkRoleActions(job,r){
  const buttons=[];
  if(hkRole==="Attendant"){
@@ -373,7 +433,7 @@ function hkRoleActions(job,r){
   if(!["Ready","On hold"].includes(job.stage))buttons.push(["Hold","Hold"]);
  }
  const html=buttons.map(([action,label])=>'<button class="hk-btn'+(["Start","Submit","Inspect"].includes(action)?" primary":"")+'" onclick="'+(action==="Inspect"?"hkInspection("+job.room+")":"hkPrompt("+job.room+",'"+action+"')")+'">'+label+'</button>').join("");
- return html+'<button class="hk-btn" onclick="hkReportDefect('+job.room+')">Repair</button>';
+ return html+(hkIsLeader()?'<button class="hk-btn" onclick="hkSetPreference('+job.room+')">Preference</button>':"")+'<button class="hk-btn" onclick="hkReportDefect('+job.room+')">Repair</button>';
 }
 
 hkSeed();
