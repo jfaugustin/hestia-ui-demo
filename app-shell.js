@@ -115,6 +115,14 @@ render=function(){
  if(dt)dt.textContent="Business date · "+DEMO_DATE;
  const roomFilter=document.getElementById("h4RoomFilter");
  if(roomFilter)roomFilter.onchange=e=>{h4RoomFilter=e.target.value;render()};
+ const hkFilterInput=document.getElementById("hkFilter");
+ if(hkFilterInput)hkFilterInput.onchange=e=>hkSetFilter(e.target.value);
+ const hkSearchInput=document.getElementById("hkSearch");
+ if(hkSearchInput)hkSearchInput.oninput=e=>{
+  hkSearch=e.target.value;const caret=e.target.selectionStart;render();
+  const next=document.getElementById("hkSearch");
+  if(next){next.focus();next.setSelectionRange(caret,caret)}
+ };
  const guestSearch=document.getElementById("reservationSearch")||document.getElementById("guestSearch");
  if(guestSearch)guestSearch.oninput=e=>{
   reservationSearch=e.target.value;const position=e.target.selectionStart;render();
