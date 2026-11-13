@@ -110,7 +110,7 @@ evaluate("dxSetRole('viewer')");
 assert.equal(evaluate("dxAssign("+dispatchId+",'em-105')"),false,"Preview viewer blocked from assignment");
 evaluate("dxSetRole('dispatcher')");
 evaluate("nav('Service Dispatch')");
-assert.ok(elements.content.innerHTML.includes("Dispatch Command"),"Unified command view renders");
+assert.ok(elements.content.innerHTML.includes("Service Dispatch"),"Unified dispatch view renders");
 
 
 evaluate("dxSetRole('dispatcher')");
