@@ -81,7 +81,7 @@ e("resetDemo()");
 assert.equal(e("state.hkJobs.length"),120,"Reset restores Housekeeping metadata without duplication");
 assert.equal(e("state.hkPassdowns.length"),1,"Reset restores demonstration passdown");
 e("nav('Rooms')");
-assert.ok(el.content.innerHTML.includes("shared room inventory"),"Rooms retains shared inventory");
+assert.ok(el.content.innerHTML.includes("Inventory and availability"),"Rooms retains shared inventory");
 assert.ok(el.content.innerHTML.includes("hkOpenRoom("),"Room inventory opens corresponding Housekeeping work record");
 assert.ok(!el.content.innerHTML.includes("cycleRoom("),"Inventory cannot bypass supervisor inspections");
 const linkedRoom=e("state.hkJobs.find(j=>j.stage!=='Ready').room");
