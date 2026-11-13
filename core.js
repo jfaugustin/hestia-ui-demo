@@ -187,6 +187,9 @@ function finances(){
 const originalResetDemo=resetDemo;
 function resetDemo(){if(!confirm("Reset all synthetic demo data?"))return;state=seed();enrichDemo();render();flash("Demo reset")};
 
+NAV.splice(2,0,["Guests","♧"]);
+enrichDemo();
+
 /* Hestia service ticket lifecycle: prototype-only; persistent in browser localStorage */
 const SVC_STATUS=["Open","Started","Stopped","Completed","Voided"];
 const SVC_PRIORITIES=["Critical","High","Normal","Low"];
@@ -749,4 +752,3 @@ function migrateLegacyDemoDates(){
 }
 migrateLegacyDemoDates();
 
-render();
