@@ -37,3 +37,19 @@
 .hk-foot{font-size:11px;color:#7f919f;line-height:1.6;margin-top:14px}
 @media(max-width:900px){.hk-two{grid-template-columns:1fr}}
 @media(max-width:700px){.hk-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-metrics>div{padding:12px}.hk-metrics strong{font-size:25px}.hk-hero{flex-direction:column}.hk-hero h1{font-size:27px}.hk-card{padding:12px}.hk-item{align-items:flex-start;flex-direction:column}.hk-actions{justify-content:flex-start}.hk-filters input{min-width:100%}}
+
+/* Housekeeping V2: role switch, inspection checklist, discreet priority cues */
+.hk-mode{display:flex;align-items:end;gap:12px;flex-wrap:wrap;border-bottom:1px solid #e6eaed;padding:0 0 14px;margin:0 0 17px}
+.hk-mode label{font-size:11px;color:#7990a0;display:flex;flex-direction:column;gap:6px;font-weight:600}
+.hk-mode select{background:#fff;border:1px solid #dce4e9;border-radius:8px;min-width:150px;padding:10px 12px;font-size:12px;color:#263f50;font-weight:600}
+.hk-hint{color:#8b9aa6;font-size:11px;line-height:1.6;max-width:310px}
+.hk-room-main{min-width:0}
+.hk-room-title{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.hk-tag{font-size:10px;padding:4px 7px;border-radius:6px;background:#f2f5f7;color:#657f90}
+.hk-tag.urgent{background:#fff0de;color:#99612e}
+.hk-inspect-summary{font-size:12px;color:#617e8e;margin-bottom:9px}
+.hk-checklist{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}
+.hk-check{border:1px solid #e5ebee;border-radius:8px;padding:11px;display:flex;align-items:center;gap:9px;font-size:12px;color:#304b5d;line-height:1.4}
+.hk-check input{accent-color:#254558;width:17px;height:17px;flex:0 0 17px}
+.hk-inspect-summary,.hk-checklist,.hk-hint{max-width:100%}
+@media(max-width:690px){.hk-mode{gap:8px}.hk-mode label{flex:1;min-width:130px}.hk-mode select{width:100%;min-width:0}.hk-checklist{grid-template-columns:1fr}}
