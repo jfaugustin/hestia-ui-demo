@@ -73,6 +73,12 @@ assert.equal(e("state.hkJobs.length"),120,"Reset restores Housekeeping metadata 
 assert.equal(e("state.hkPassdowns.length"),1,"Reset restores demonstration passdown");
 e("nav('Rooms')");
 assert.ok(el.content.innerHTML.includes("shared room inventory"),"Rooms retains shared inventory");
+assert.ok(el.content.innerHTML.includes("hkOpenRoom("),"Room inventory opens corresponding Housekeeping work record");
+assert.ok(!el.content.innerHTML.includes("cycleRoom("),"Inventory cannot bypass supervisor inspections");
+const linkedRoom=e("state.hkJobs.find(j=>j.stage!=='Ready').room");
+e("hkOpenRoom("+linkedRoom+")");
+assert.equal(e("page"),"Housekeeping","Room link navigates to standalone department");
+assert.ok(el.content.innerHTML.includes("Room "+linkedRoom),"Room search highlights linked Housekeeping work record");
 e("nav('Housekeeping')");
 assert.ok(el.content.innerHTML.includes("Room board"),"Housekeeping remains independent after reset");
 console.log("PASS: Housekeeping assignments, cleaning, inspection pass/fail, stayover occupancy, service requests, passdowns, and reset");
