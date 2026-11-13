@@ -181,7 +181,7 @@ enrichDemo();
 const SVC_STATUS=["Open","Started","Stopped","Completed","Voided"];
 const SVC_PRIORITIES=["Critical","High","Normal","Low"];
 const SVC_TEAMS=["Engineering","Housekeeping","Guest Services","Security","Front Office","IT","Food & Beverage","Management"];
-let svcSelected=null,svcFilter="Active",svcQuery="";
+let svcSelected=null;
 const svcTime=v=>v?new Date(v).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"—";
 function svcSeed(){
  if(!Array.isArray(state.tickets))state.tickets=[];
@@ -252,54 +252,13 @@ function svcTag(t){return '<span class="badge '+(t.status==="Completed"?"good":t
 function svcOpen(id){svcSelected=Number(id);page="Service Dispatch";render();window.scrollTo?.(0,0)}
 function svcBack(){svcSelected=null;render()}
 
-function services(){
- if(svcSelected!==null)return svcTicketDetail();
- const active=state.tickets.filter(t=>!["Completed","Voided"].includes(t.status));
- const filtered=state.tickets.filter(t=>(svcFilter==="All"||svcFilter==="Active"&&!["Completed","Voided"].includes(t.status)||svcFilter===t.status)&&
- (t.title+" "+t.id+" "+t.location+" "+t.team+" "+t.assignee).toLowerCase().includes(svcQuery.toLowerCase()));
- return header("Service Dispatch","Assign, start, stop, complete, or void hotel service tickets.",'<button class="primary" onclick="openTicket()">+ New ticket</button>')+
- '<div class="svcstats">'+
- '<div class="svcstat"><span>Active tickets</span><strong>'+active.length+'</strong></div>'+
- '<div class="svcstat"><span>Started</span><strong>'+state.tickets.filter(t=>t.status==="Started").length+'</strong></div>'+
- '<div class="svcstat"><span>Stopped</span><strong>'+state.tickets.filter(t=>t.status==="Stopped").length+'</strong></div>'+
- '<div class="svcstat"><span>Completed</span><strong>'+state.tickets.filter(t=>t.status==="Completed").length+'</strong></div></div>'+
- panel("Ticket queue",'<div class="svcbar"><input id="svcSearch" aria-label="Search tickets" placeholder="Search ticket, room, assignee..." value="'+safe(svcQuery)+'"><select id="svcFilter" aria-label="Filter ticket status">'+svcOpts(["Active","All",...SVC_STATUS],svcFilter)+'</select></div>'+
- '<div class="muted" style="font-size:11px;margin-bottom:10px">'+filtered.length+' matching tickets</div>'+
- (filtered.length?filtered.map(t=>'<div class="svcrow"><div class="svcmain"><button class="svctitle" onclick="svcOpen('+t.id+')">#'+t.id+' · '+safe(t.title)+'</button><div class="svcmeta">'+safe(t.location)+' · '+safe(t.team)+' · '+safe(t.assignee)+' · '+svcTime(t.createdAt)+'</div></div><div class="svcright">'+svcTag(t)+'<span class="svcpriority '+safe(t.priority)+'">'+safe(t.priority)+'</span><button class="secondary" onclick="svcOpen('+t.id+')">Details</button></div></div>').join(""):'<div class="empty">No matching tickets.</div>'));
-};
-function openTicket(){
- modal("New service ticket",field("Request summary","title")+
- '<label>Location<input name="location" required placeholder="Room 814, Lobby, B1..."></label>'+
- '<label>Department<select name="team">'+svcOpts(SVC_TEAMS,"Engineering")+'</select></label>'+
- '<label>Priority<select name="priority">'+svcOpts(SVC_PRIORITIES,"Normal")+'</select></label>'+
- '<label>Request description<input name="description" required placeholder="What needs to be done?"></label>',f=>{
-  const title=String(f.get("title")||"").trim(),location=String(f.get("location")||"").trim(),description=String(f.get("description")||"").trim();
-  if(!title||!location||!description)return flash("All ticket fields are required");
-  const id=Math.max(45000,...state.tickets.map(x=>Number(x.id)||0))+1;
-  const roomMatch=location.match(/\b\d{3,4}\b/);
-  const ticket={id,title,location,room:roomMatch?Number(roomMatch[0]):null,description,team:String(f.get("team")),priority:String(f.get("priority")),assignee:"Unassigned",category:"Guest request",status:"Open",createdAt:new Date().toISOString(),notes:[],history:[]};
-  state.tickets.unshift(ticket);svcRecord(ticket,"Created","Ticket created");
-  svcSelected=id;closeModal();render();flash("New ticket #"+id+" created");
- });
-};
-svcSeed();
-const svcPreviousRender=render;
-render=function(){
- svcPreviousRender();
- if(page!=="Service Dispatch")return;
- const search=document.getElementById("svcSearch"),filter=document.getElementById("svcFilter");
- if(search)search.oninput=e=>{svcQuery=e.target.value;const pos=e.target.selectionStart;render();const input=document.getElementById("svcSearch");input?.focus();input?.setSelectionRange?.(pos,pos)};
- if(filter)filter.onchange=e=>{svcFilter=e.target.value;render()};
-};
-
-
 /* Front Office guest-services workflow: native synthetic service tickets */
 const FO_TYPES={
  "Bell Service":{team:"Front Office",priority:"Normal",sla:15,summary:"Bell and luggage assistance"},
  "Live Checkout":{team:"Front Office",priority:"High",sla:10,summary:"In-person guest checkout assistance"},
  "Food Delivery":{team:"Food & Beverage",priority:"Normal",sla:30,summary:"In-room dining delivery / escort"}
 };
-let foView="Active";
+
 function foInit(){
  if(!state.foSeeded){
   const rooms=[205,207,212,223,307,318,409,421,504,519,529,601];
@@ -324,60 +283,8 @@ function foDue(t){
  const m=Math.round((Date.parse(t.dueAt)-Date.now())/60000);
  return m<0?"Overdue "+Math.abs(m)+"m":m===0?"Due now":"Due in "+m+"m";
 }
-function foNew(kind){
- const config=FO_TYPES[kind];
- if(!config)return flash("Invalid service type");
- const related=state.reservations.filter(r=>["Reserved","Checked in"].includes(r.status)).slice(0,90);
- const options='<option value="">No linked reservation</option>'+related.map(r=>'<option value="'+r.id+'">'+safe(r.guest)+" · "+safe(r.confirmation)+" · "+r.room+'</option>').join("");
- const specifics=kind==="Bell Service"?'<label>Service direction<select name="direction"><option>Arrival assistance</option><option>Departure luggage pickup</option><option>Luggage storage</option><option>Vehicle loading assistance</option></select></label>':
- kind==="Live Checkout"?'<label>Checkout request<select name="direction"><option>Front Desk assistance</option><option>Guest requests express departure</option><option>Folio review / billing question</option><option>Bell assistance requested</option></select></label>':
- '<label>Delivery type<select name="direction"><option>IRD order delivery</option><option>Third-party food delivery</option><option>Delivery pickup from lobby</option><option>Guest amenity delivery</option></select></label>';
- modal("New "+kind+" request",
- '<label>Guest / requestor<input name="guest" required placeholder="Guest name or department"></label>'+
- '<label>Room or delivery location<input name="location" required placeholder="Room 814 or lobby"></label>'+
- '<label>Linked reservation (optional)<select name="reservation">'+options+'</select></label>'+
- specifics+
- '<label>Priority<select name="priority">'+svcOpts(SVC_PRIORITIES,config.priority)+'</select></label>'+
- '<label>Assigned to<select name="assignee">'+svcOpts(["Unassigned","Bell team","Front Desk team","IRD team","Guest Services team","Food & Beverage team"],"Unassigned")+'</select></label>'+
- '<label>Instructions<input name="description" required placeholder="Dispatch instructions or delivery notes"></label>',f=>{
-  const guest=String(f.get("guest")||"").trim(),location=String(f.get("location")||"").trim(),description=String(f.get("description")||"").trim(),rId=Number(f.get("reservation"));
-  const linked=state.reservations.find(x=>x.id===rId);
-  const roomMatch=location.match(/\b\d{3,4}\b/);
-  const room=roomMatch?Number(roomMatch[0]):linked?.room||null;
-  if(!guest||!location||!description)return flash("Guest, location and instructions are required");
-  if(linked&&room!==linked.room)return flash("Linked reservation room does not match request location");
-  const id=Math.max(65000,...state.tickets.map(x=>Number(x.id)||0))+1;
-  const dueAt=new Date(Date.now()+config.sla*60000).toISOString();
-  const ticket={id,title:kind+" — "+guest,requestType:kind,category:kind,room,location,guest,reservationId:linked?.id||null,team:config.team,priority:String(f.get("priority")),assignee:String(f.get("assignee")),description:String(f.get("direction"))+" · "+description,status:"Open",createdAt:new Date().toISOString(),dueAt,notes:[],history:[]};
-  state.tickets.unshift(ticket);svcRecord(ticket,"Created","Front Office "+kind+" request; SLA target "+config.sla+" minutes");
-  closeModal();svcSelected=id;page="Service Dispatch";render();flash("Guest service ticket #"+id+" created");
- });
-}
-function frontOfficeWorkspace(){
- const all=state.tickets.filter(t=>FO_TYPES[t.requestType]);
- const items=all.filter(t=>foView==="All"||foView==="Active"&&!["Completed","Voided"].includes(t.status)||foView===t.requestType);
- const open=all.filter(t=>!["Completed","Voided"].includes(t.status));
- const urgent=open.filter(t=>Date.parse(t.dueAt)<Date.now());
- return header("Front Office","Real-time guest assistance, bell service, live checkout and food delivery.")+
- '<div class="foquick">'+Object.entries(FO_TYPES).map(([name,c])=>'<button onclick="foNew(\''+name+'\')"><strong>+ '+name+'</strong><span>'+c.summary+' · '+c.sla+' min target</span></button>').join("")+'</div>'+
- '<div class="svcstats"><div class="svcstat"><span>Open requests</span><strong>'+open.length+'</strong></div><div class="svcstat"><span>Started</span><strong>'+open.filter(t=>t.status==="Started").length+'</strong></div><div class="svcstat"><span>Stopped</span><strong>'+open.filter(t=>t.status==="Stopped").length+'</strong></div><div class="svcstat"><span>Past target</span><strong>'+urgent.length+'</strong></div></div>'+
- panel("Guest service queue",'<div class="fo-tabs">'+["Active","All",...Object.keys(FO_TYPES)].map(t=>'<button class="'+(foView===t?"selected":"")+'" onclick="foSetView(\''+t+'\')">'+t+'</button>').join("")+'</div>'+
- '<div class="foqueue">'+(items.length?items.map(t=>'<div class="foticket"><div style="min-width:0"><button class="svctitle" onclick="foOpen('+t.id+')">#'+t.id+' · '+safe(t.requestType)+'</button><strong>'+safe(t.guest||"Guest")+' · '+safe(t.location)+'</strong><small>'+safe(t.description)+' · '+safe(t.assignee)+' · '+safe(t.priority)+' priority</small><small>'+safe(foDue(t))+'</small></div><div class="actions">'+svcTag(t)+'<button class="secondary" onclick="foOpen('+t.id+')">Details</button></div></div>').join(""):'<div class="empty">No matching Front Office tickets.</div>')+'</div>')+
- '<div class="section">'+panel("Front Desk reservations",'<p class="muted" style="margin-bottom:13px">Guest checkout requests are service tickets, not financial checkout transactions. Open the reservation to review the folio and perform checkout separately.</p>'+state.reservations.filter(r=>r.status==="Checked in").slice(0,8).map(r=>'<div class="line"><div><button class="clickable" onclick="openDetail('+r.id+')">'+safe(r.guest)+'</button><div class="tiny">Room '+r.room+' · '+safe(r.confirmation)+'</div></div><button class="secondary" onclick="foFromReservation('+r.id+')">Checkout request</button></div>').join(""))+'</div>';
-}
-function foSetView(v){foView=v;render()}
 function foOpen(id){svcSelected=Number(id);page="Service Dispatch";render()}
-function foFromReservation(id){
- const r=state.reservations.find(x=>x.id===Number(id));if(!r)return;
- foNew("Live Checkout");
- const form=document.getElementById("newform");
- if(form){
-  if(form.elements.guest)form.elements.guest.value=r.guest;
-  if(form.elements.location)form.elements.location.value="Room "+r.room;
-  if(form.elements.reservation)form.elements.reservation.value=String(r.id);
- }
-}
-desk=function(){return frontOfficeWorkspace()};
+desk=function(){return header("Front Office","Bell Service · Live Checkout · Food Delivery")};
 foInit();
 
 
@@ -534,18 +441,6 @@ function dxAnalytics(){
  return '<div class="dxstats"><div class="dxstat"><strong>'+total+'</strong><span>Total tickets</span></div><div class="dxstat"><strong>'+score+'%</strong><span>Completed share</span></div><div class="dxstat"><strong>'+overdue.length+'</strong><span>Overdue active</span></div><div class="dxstat"><strong>'+avg+'m</strong><span>Avg completed elapsed time*</span></div></div>'+
  panel("Departmental throughput",teamStats.map(x=>'<div class="dxoption"><strong>'+safe(x.name)+'</strong><span class="dxsmall">'+x.tickets.length+' requests · '+x.tickets.filter(x=>x.status==="Completed").length+' completed · '+x.tickets.filter(x=>x.status==="Stopped").length+' stopped</span></div>').join("")+'<p class="hint" style="margin-top:12px">*Elapsed time is not labor time. Demonstration timing and synthetic records are illustrative only.</p>');
 }
-function dxBoard(){
- const overdue=dxEscalations(),active=state.tickets.filter(t=>!["Voided","Completed"].includes(t.status));
- const filtered=active.filter(t=>(dxDepartment==="All"||t.team===dxDepartment)&&(t.title+" "+t.category+" "+t.location+" "+t.assignee+" "+t.id).toLowerCase().includes(dxSearch.toLowerCase()));
- const stats='<div class="dxstats"><div class="dxstat"><strong>'+active.length+'</strong><span>Active</span></div><div class="dxstat"><strong>'+active.filter(t=>t.employeeId&&!t.acknowledgedAt).length+'</strong><span>Unacknowledged</span></div><div class="dxstat"><strong>'+active.filter(t=>t.status==="Stopped").length+'</strong><span>Stopped</span></div><div class="dxstat"><strong>'+overdue.length+'</strong><span>Overdue</span></div></div>';
- const filters='<div class="svcbar"><input id="dxSearch" placeholder="Search dispatch queue" aria-label="Search dispatch queue" value="'+safe(dxSearch)+'"><select aria-label="Department filter" id="dxDept">'+svcOpts(["All",...DX_DEPTS],dxDepartment)+'</select></div>';
- const rows=filtered.map(t=>{
- const assignees=state.dxEmployees.filter(e=>e.team===t.team&&e.available);
- return '<div class="svcrow"><div class="svcmain"><button class="svctitle" onclick="svcOpen('+t.id+')">#'+t.id+' · '+safe(t.title)+'</button><div class="svcmeta">'+safe(t.team)+' · '+safe(t.location)+' · '+safe(t.category)+' · '+safe(t.assignee)+'</div><div class="dxsmall">'+(t.acknowledgedAt?"Acknowledged "+svcTime(t.acknowledgedAt):t.employeeId?"Awaiting acknowledgment":"Unassigned")+' · Due '+svcTime(t.dueAt)+(t.escalated?' · <span class="danger">Overdue / escalated</span>':'')+'</div></div><div class="svcright">'+svcTag(t)+'<select class="dxinput" aria-label="Assign #'+t.id+'" onchange="dxAssign('+t.id+',this.value)">'+svcOpts(["Unassigned",...assignees.map(x=>x.id)],t.employeeId||"Unassigned").replace(/<option value="([^"]+)">([^<]+)<\/option>/g,(whole,value,label)=>label!=="Unassigned"?whole.replace(label,safe(state.dxEmployees.find(e=>e.id===value)?.name||label)):whole)+'</select><button class="secondary" onclick="svcOpen('+t.id+')">Open</button></div></div>';
- }).join("");
- return stats+panel("Live operations queue",filters+'<div class="dxsmall" style="margin-bottom:9px">'+filtered.length+' matching active tickets · local demo, not multi-user live</div>'+(rows||'<div class="empty">No tickets match</div>'));
-}
-
 function dxNewRequest(team){
  if(!dxRequire("create"))return;
  team=DX_CATEGORIES[team]?team:"Front Office";
@@ -567,19 +462,6 @@ function dxNewRequest(team){
  });
 }
 function dxFillNewCats(team){const e=document.getElementById("dxNewCategory");if(e)e.innerHTML=svcOpts(DX_CATEGORIES[team]||[],"")}
-function dxDetailAddon(t){
- const assignees=state.dxEmployees.filter(x=>x.team===t.team);
- const log=t.history.slice().reverse().map(x=>'<div class="dxlog"><strong>'+safe(x.event)+'</strong><small>'+safe(x.by)+' · '+svcTime(x.at)+'</small><div>'+safe(x.note||"")+'</div></div>').join("");
- const choices='<label>Employee dispatch</label><select class="svcselect" aria-label="Assign employee" onchange="dxAssign('+t.id+',this.value)">'+svcOpts(["Unassigned",...assignees.map(x=>x.id)],t.employeeId||"Unassigned")+'</select><p class="hint">IDs correspond to the on-duty board; unavailable staff cannot be assigned.</p>';
- const link=t.links.map(id=>'<button class="secondary" onclick="svcOpen('+id+')">#'+id+'</button>').join("");
- const attachments=t.attachments.map(x=>'<div class="dxoption"><span>'+safe(x.name)+'</span><small>'+Math.round(x.bytes/1024)+' KB · metadata only</small></div>').join("");
- return '<div class="dxsection">'+panel("Dispatch and acknowledgments",choices+'<div class="dxactions" style="margin-top:11px"><button onclick="dxAck('+t.id+')">Acknowledge assignment</button><button onclick="dxCreateLinkedPrompt('+t.id+')">+ Linked task</button></div>'+
- '<p class="hint" style="margin-top:10px">Assignment: '+safe(t.assignee)+' · '+(t.acknowledgedAt?"Acknowledged "+svcTime(t.acknowledgedAt):"Not acknowledged")+'</p>'+
- '<p class="hint">Escalation: '+(t.escalated?"Flagged overdue":"Not escalated")+' · Due '+svcTime(t.dueAt)+'</p>')+'</div>'+
- '<div class="svcgrid dxsection">'+panel("Linked departmental requests",'<div class="dxactions">'+link+'</div>'+(link?"":'<p class="muted">No linked tasks.</p>'))+
- panel("Supporting attachments",'<div class="alertbox">Public demo saves only file name and size, not file bytes. Do not upload real guest information or evidence.</div><input class="dxinput" type="file" id="dxFile" accept="image/*,.pdf" onchange="dxAttach('+t.id+',this)" style="margin-top:12px">'+attachments)+'</div>'+
- '<div class="dxsection">'+panel("Complete ticket history",log)+'</div>';
-}
 function dxAttach(id,input){
  if(!dxRequire("notes"))return;
  const t=dxTicket(id),file=input?.files?.[0];if(!t||!file)return;
@@ -589,15 +471,11 @@ function dxAttach(id,input){
  t.attachments.push({name:file.name.slice(0,80),bytes:file.size,type:file.type,at:new Date().toISOString()});
  dxEvent(t,"Attachment metadata added","No file contents stored in public demo");render();
 }
-const dxOriginalService=services;
-services=function(){if(svcSelected!==null){const t=dxTicket(svcSelected);return dxOriginalService()+(t?dxDetailAddon(t):"")}return dxHome()};
-const dxOriginalAction=svcAction;
 function svcAction(id,action){if(!dxRequire(action==="Void"?"void":"transition"))return;
  if(action==="Start"){dxTransition(id,action,"Work started");return}
  modal(action+" ticket #"+id,'<label>'+(action==="Complete"?"Resolution":action==="Stop"?"Reason for stopping":"Reason for void")+'<input name="note" required></label>',f=>{if(dxTransition(id,action,String(f.get("note")||"")))closeModal()});
 };
-const dxOriginalOpenTicket=openTicket;
-openTicket=function(){dxNewRequest("Engineering")};
+function openTicket(){dxNewRequest("Engineering")}
 const dxNavBefore=nav;
 nav=function(name){if(name==="Service Dispatch")svcSelected=null;dxNavBefore(name)};
 dxBootstrap();
@@ -651,21 +529,6 @@ function dxReopenPrompt(id){
  modal("Reopen completed ticket",'<label>Reason for reopening<input name="reason" required placeholder="Issue not fully resolved"></label>',
  f=>{if(dxReopen(id,String(f.get("reason")||"")))closeModal()});
 }
-function dxNotificationPermission(){
- if(typeof Notification==="undefined"){flash("Browser notifications unavailable here");return}
- if(Notification.permission==="granted"){new Notification("Hestia Dispatch demo",{body:"Notifications are available on this browser; cross-device push is not connected."});return}
- Notification.requestPermission().then(status=>{flash(status==="granted"?"Demo notifications enabled":"Notification permission not granted")});
-}
-const dxPriorBoard=dxBoard;
-dxBoard=function(){
- return '<div class="dxactions" style="margin:0 0 12px"><button onclick="dxNewRequest(\'Front Office\')">+ Create ticket</button><button onclick="dxAutoDispatchQueue()">Auto-dispatch available staff</button><button onclick="dxNotificationPermission()">Enable browser notification preview</button></div>'+dxPriorBoard();
-};
-const dxPriorDetailAddon=dxDetailAddon;
-dxDetailAddon=function(t){
- return dxPriorDetailAddon(t)+'<div class="dxsection">'+panel("Dispatch lifecycle",'<div class="dxactions"><button onclick="dxAutoAssign('+t.id+')">Auto-assign available employee</button>'+(t.status==="Completed"?'<button onclick="dxReopenPrompt('+t.id+')">Reopen completed ticket</button>':"")+'</div><p class="hint" style="margin-top:10px">Voided tickets remain terminal. Reopening preserves the audit record and requires a documented reason. Notification previews are browser-local; they are not staff mobile push alerts.</p>')+'</div>';
-};
-
-
 /* Dispatch 2.2 — one employee assignment model, one detail view, simpler navigation. */
 let dcStatus="Active";
 function dcStaffBootstrap(){
@@ -808,7 +671,7 @@ function dcDetail(){
  '<div class="dc-details dc-detail-footer">'+record+extras+'</div>';
 }
 // Replace the nested legacy detail view and duplicate assignment panels.
-services=function(){return svcSelected!==null?dcDetail():dcHome()};
+function services(){return svcSelected!==null?dcDetail():dcHome()}
 
 const dcOriginalRender=render;
 render=function(){
