@@ -52,14 +52,14 @@ function h4SwitchRoom(mode){h4RoomMode=mode;page=mode;render()}
 function h4SwitchStay(mode){h4StayMode=mode;page=mode;render()}
 function h4SwitchOps(mode){h4OpsMode=mode;page=mode==="Summary"?"Operations":mode;render()}
 function h4RoomPage(){
- const ready=state.rooms.filter(r=>r.status==="ready"),occupied=state.rooms.filter(r=>r.status==="occupied"),
+ const ready=state.rooms.filter(r=>r.status==="ready"&&(typeof hkReadyForArrival!=="function"||hkReadyForArrival(r.id))),occupied=state.rooms.filter(r=>r.status==="occupied"),
  dirty=state.rooms.filter(r=>r.status==="dirty"),out=state.rooms.filter(r=>r.status==="out");
  const stats='<div class="h4-metrics">'+h4Metric("Ready",ready.length)+h4Metric("Occupied",occupied.length)+
  h4Metric("Needs service",dirty.length)+h4Metric("Out of order",out.length)+'</div>';
  const rooms=state.rooms.filter(r=>h4RoomFilter==="All"||r.status===h4RoomFilter);
  const list='<div class="h4-card"><div class="h4-filter"><select id="h4RoomFilter" aria-label="Room status filter">'+
  svcOpts(["All","ready","occupied","dirty","out"],h4RoomFilter)+'</select></div>'+
- '<div class="h4-roomset">'+rooms.map(r=>'<button class="'+safe(r.status)+'" onclick="hkOpenRoom('+r.id+')" aria-label="View Housekeeping record for room '+r.id+', '+safe(r.status)+'">'+r.id+'<small>'+safe(r.status)+'</small></button>').join("")+'</div>'+
+ '<div class="h4-roomset">'+rooms.map(r=>{const display=r.status==="ready"&&typeof hkReadyForArrival==="function"&&!hkReadyForArrival(r.id)?"restricted":r.status;return '<button class="'+safe(display)+'" onclick="hkOpenRoom('+r.id+')" aria-label="View Housekeeping record for room '+r.id+', '+safe(display)+'">'+r.id+'<small>'+safe(display)+'</small></button>'}).join("")+'</div>'+
  '<p class="h4-small" style="margin-top:12px">Open any room to review its Housekeeping record. Only a completed room inspection clears dirty-room readiness.</p></div>';
  return h4Hero("Rooms","Inventory and availability shared with Front Office and Housekeeping.",
  h4Btn("Open Housekeeping","nav('Housekeeping')"))+stats+list;
