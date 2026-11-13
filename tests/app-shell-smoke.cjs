@@ -30,7 +30,7 @@ for(const section of ["Overview","Reservations","Front Desk","Rooms","Service Di
 }
 evaluate("nav('Overview')");
 assert.ok(nodes.content.innerHTML.includes("Priority requests"),"Dashboard focuses on action queue");
-assert.ok(nodes.content.innerHTML.includes("Today's operations"),"Dashboard shows daily summary");
+assert.ok(nodes.content.innerHTML.includes("Today’s operations"),"Dashboard shows daily summary");
 assert.ok(!nodes.content.innerHTML.includes("Seven-day booked occupancy"),"Avoid duplicate chart dashboard");
 evaluate("nav('Rooms')");
 assert.ok(nodes.content.innerHTML.includes("Inventory"));
