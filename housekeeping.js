@@ -60,6 +60,9 @@ function hkUpdate(id,action,value=""){
  const room=hkRoom(id),job=hkJob(id);
  if(!room||!job)return false;
  const closed=room.status==="out";
+ if(hkRole==="Attendant"){
+  if(!["Start","Submit"].includes(action)||job.assigneeId!==hkSelectedStaff){flash("This task requires your own assignment or supervisor authority");return false}
+ }else if(!hkIsLeader()){flash("Supervisor authority required");return false}
  if(action==="Assign"){
   const employee=hkStaff().find(e=>e.id===value&&e.available);
   if(!employee){flash("Select an available Housekeeping attendant");return false}
@@ -102,6 +105,7 @@ function hkUpdate(id,action,value=""){
  job.lastUpdate=new Date().toISOString();save();render();return true;
 }
 function hkPrompt(id,action){
+ if(!hkIsLeader()&&!["Start","Submit"].includes(action)){flash("Supervisor controls are unavailable in the attendant view");return}
  if(action==="Assign"){
   const j=hkJob(id);
   modal("Assign room "+id,'<label>Housekeeping attendant<select name="employee">'+
@@ -174,33 +178,29 @@ function hkOpenRoom(id){
 }
 function hkSetTab(v){if(["Board","Requests","Team","Passdown"].includes(v)){hkTab=v;render()}}
 function hkSetFilter(v){hkFilter=v;render()}
-function hkActions(j,r){
- const buttons=[];
- if(j.stage==="Unassigned")buttons.push(["Assign","Assign"]);
- if(j.stage==="Assigned")buttons.push(["Assign","Reassign"],["Start","Start"]);
- if(j.stage==="In progress")buttons.push(["Submit","Submit for inspection"]);
- if(j.stage==="Awaiting inspection")buttons.push(["Approve","Pass"],["Fail","Fail"]);
- if(j.stage==="On hold"&&r.status!=="out")buttons.push(["Resume","Resume"]);
- if(j.stage==="Ready")buttons.push(["Service","Schedule cleaning"]);
- if(!["Ready","On hold"].includes(j.stage))buttons.push(["Hold","Hold"]);
- return buttons.map(([action,label])=>'<button class="hk-btn'+(["Start","Approve","Submit"].includes(action)?" primary":"")+'" onclick="hkPrompt('+j.room+',\''+action+'\')">'+label+'</button>').join("");
-}
+function hkActions(j,r){return hkRoleActions(j,r)}
+
 function hkBoard(){
  hkSyncFromRooms();
  const items=state.hkJobs.filter(j=>{
-  const r=hkRoom(j.room);
-  if(!r)return false;
+  const r=hkRoom(j.room);if(!r)return false;
+  if(hkRole==="Attendant"&&j.assigneeId!==hkSelectedStaff)return false;
   if(hkFilter==="Needs attention"&&j.stage==="Ready")return false;
   if(hkFilter!=="All"&&hkFilter!=="Needs attention"&&j.stage!==hkFilter)return false;
   return (String(j.room)+" "+j.stage+" "+hkOwner(j)+" "+j.kind).toLowerCase().includes(hkSearch.toLowerCase());
  });
- items.sort((a,b)=>Number(a.stage==="Ready")-Number(b.stage==="Ready")||Number(b.priority==="High")-Number(a.priority==="High")||a.room-b.room);
+ items.sort((a,b)=>hkPriority(a).tier-hkPriority(b).tier||Number(a.stage==="Ready")-Number(b.stage==="Ready")||a.room-b.room);
  const controls='<div class="hk-filters"><input id="hkSearch" placeholder="Room or attendant" aria-label="Find Housekeeping room" value="'+safe(hkSearch)+'"><select id="hkFilter" aria-label="Filter room work">'+
  svcOpts(["Needs attention","All",...HK_STAGES],hkFilter)+'</select></div>';
- return '<div class="hk-card">'+controls+'<div class="hk-list">'+(items.length?items.map(j=>{
-  const r=hkRoom(j.room),out=r.status==="out";
-  return '<div class="hk-item"><div><strong>Room '+j.room+'</strong> <span class="hk-pill">'+safe(j.kind)+'</span><div class="hk-muted">'+safe(j.stage)+' · '+safe(hkOwner(j))+' · Inventory: '+safe(r.status)+(out?' · Engineering hold':"")+'</div>'+(j.holdReason?'<div class="hk-muted">Hold: '+safe(j.holdReason)+'</div>':"")+'</div><div class="hk-actions">'+hkActions(j,r)+'</div></div>';
- }).join(""):'<div class="hk-empty">No rooms match these filters.</div>')+'</div></div>';
+ const body=items.map(j=>{
+  const r=hkRoom(j.room),priority=hkPriority(j),restricted=hkRestrictions(j),occupancy=hkOccupancy(j.room);
+  return '<div class="hk-item"><div class="hk-room-main"><div class="hk-room-title"><strong>Room '+j.room+'</strong><span class="hk-pill">'+safe(j.kind)+'</span>'+(priority.tier<=1?'<span class="hk-tag urgent">'+safe(priority.label)+'</span>':"")+'</div>'+
+  '<div class="hk-muted">'+safe(j.stage)+' · '+safe(hkOwner(j))+' · '+safe(occupancy)+' · '+safe(hkCleanliness(j))+'</div>'+
+  '<div class="hk-muted">'+hkCredits(j)+' workload credits · '+(priority.arrival?"Next arrival "+safe(priority.arrival):"No upcoming arrival")+
+  (restricted.out||restricted.active.length?" · Room release restricted":"")+'</div>'+
+  (j.holdReason?'<div class="hk-muted">Hold: '+safe(j.holdReason)+'</div>':"")+'</div><div class="hk-actions">'+hkActions(j,r)+'</div></div>';
+ }).join("");
+ return '<div class="hk-card">'+controls+'<div class="hk-list">'+(items.length?body:'<div class="hk-empty">No rooms match these filters.</div>')+'</div></div>';
 }
 function hkRequests(){
  const list=state.tickets.filter(t=>t.team==="Housekeeping").sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
@@ -227,13 +227,30 @@ function hkPassdown(){
 }
 function hkPage(){
  hkSyncFromRooms();
- const j=state.hkJobs,attention=j.filter(x=>!["Ready"].includes(x.stage)),inspect=j.filter(x=>x.stage==="Awaiting inspection"),held=j.filter(x=>x.stage==="On hold"),req=state.tickets.filter(t=>t.team==="Housekeeping"&&!["Completed","Voided"].includes(t.status));
- return '<section class="hk-shell">'+
- '<div class="hk-hero"><div><div class="h4-eyebrow">DEPARTMENT OPERATIONS</div><h1>Housekeeping</h1><p>Cleaning assignments, inspections, guest services and shift coordination.</p></div><div class="hk-actions"><button class="hk-btn primary" onclick="hkServiceRequest()">+ Guest request</button><button class="hk-btn" onclick="hkHandover()">New passdown</button></div></div>'+
- '<div class="hk-metrics"><div><strong>'+attention.length+'</strong><span>Rooms needing attention</span></div><div><strong>'+inspect.length+'</strong><span>Awaiting inspection</span></div><div><strong>'+held.length+'</strong><span>On hold</span></div><div><strong>'+req.length+'</strong><span>Active guest requests</span></div></div>'+
- '<div class="hk-tabs">'+[["Board","Room board"],["Requests","Guest requests"],["Team","Attendants"],["Passdown","Shift handover"]].map(([value,label])=>'<button class="'+(hkTab===value?"active":"")+'" onclick="hkSetTab(\''+value+'\')">'+label+'</button>').join("")+'</div>'+
+ const jobs=state.hkJobs,active=jobs.filter(x=>x.stage!=="Ready"),inspect=jobs.filter(x=>x.stage==="Awaiting inspection"),
+ held=jobs.filter(x=>x.stage==="On hold"),requests=state.tickets.filter(t=>t.team==="Housekeeping"&&!["Completed","Voided"].includes(t.status));
+ const available=hkStaff();
+ const roleSwitch='<div class="hk-mode"><label>Workspace <select id="hkRoleSelect" aria-label="Housekeeping workspace" onchange="hkSetRole(this.value)">'+
+ svcOpts(["Supervisor","Attendant","Manager"],hkRole)+'</select></label>'+
+ (hkRole==="Attendant"?'<label>Employee <select aria-label="Housekeeping employee" onchange="hkSetStaff(this.value)">'+
+ available.map(e=>'<option value="'+safe(e.id)+'"'+(hkSelectedStaff===e.id?" selected":"")+'>'+safe(e.name)+'</option>').join("")+'</select></label>':"")+
+ '<span class="hk-hint">Demo role preview; production access requires authenticated identities.</span></div>';
+ const leadership=hkIsLeader();
+ const headerActions=leadership?'<button class="hk-btn primary" onclick="hkAutoAllocate()">Auto-allocate rooms</button><button class="hk-btn" onclick="hkServiceRequest()">+ Guest request</button>':
+ '<button class="hk-btn primary" onclick="hkSetTab(\'Board\')">My room queue</button>';
+ const tabs=leadership?[["Board","Room board"],["Requests","Guest requests"],["Team","Attendants"],["Passdown","Shift handover"]]:
+ [["Board","My rooms"],["Requests","Requests"]];
+ if(!tabs.some(([v])=>v===hkTab))hkTab="Board";
+ const visibleJobs=leadership?active:active.filter(j=>j.assigneeId===hkSelectedStaff);
+ return '<section class="hk-shell"><div class="hk-hero"><div><div class="h4-eyebrow">DEPARTMENT OPERATIONS</div><h1>Housekeeping</h1><p>Cleaning, inspections and guest service—organized for each role.</p></div><div class="hk-actions">'+headerActions+'</div></div>'+
+ roleSwitch+
+ '<div class="hk-metrics"><div><strong>'+visibleJobs.length+'</strong><span>'+(leadership?"Rooms needing attention":"My remaining rooms")+'</span></div>'+
+ '<div><strong>'+inspect.filter(j=>leadership||j.assigneeId===hkSelectedStaff).length+'</strong><span>Awaiting inspection</span></div>'+
+ '<div><strong>'+held.filter(j=>leadership||j.assigneeId===hkSelectedStaff).length+'</strong><span>On hold</span></div>'+
+ '<div><strong>'+requests.length+'</strong><span>Guest requests</span></div></div>'+
+ '<div class="hk-tabs">'+tabs.map(([value,label])=>'<button class="'+(hkTab===value?"active":"")+'" onclick="hkSetTab(\''+value+'\')">'+label+'</button>').join("")+'</div>'+
  (hkTab==="Board"?hkBoard():hkTab==="Requests"?hkRequests():hkTab==="Team"?hkTeam():hkPassdown())+
- '<p class="hk-foot">Shared room status: a completed departure-room inspection updates Front Office room readiness. Occupied stayover rooms remain occupied. Synthetic browser-local demonstration.</p></section>';
+ '<p class="hk-foot">Shared inventory · occupancy, cleaning, inspection and maintenance restrictions are tracked independently. Synthetic browser-local demonstration.</p></section>';
 }
 
 /* Housekeeping V2 — role-aware tasks, room prioritization, and inspection safety. */
