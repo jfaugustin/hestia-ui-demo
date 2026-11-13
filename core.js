@@ -109,9 +109,9 @@ function enrichDemo(){
  state.demoV13=true;
  save();
 }
-function folioBalance(r){return Math.round(r.folio.reduce((s,x)=>s+(x.type==="Charge"||x.type==="Refund"?x.amount:-x.amount),0)*100)/100}
-function chargesTotal(r){return r.folio.filter(x=>x.type==="Charge").reduce((s,x)=>s+x.amount,0)}
-function settledTotal(r){return r.folio.filter(x=>x.type==="Payment").reduce((s,x)=>s+x.amount,0)-r.folio.filter(x=>x.type==="Refund").reduce((s,x)=>s+x.amount,0)}
+function folioBalance(r){return Math.round((r.folio||[]).reduce((s,x)=>s+(x.type==="Charge"||x.type==="Refund"?x.amount:-x.amount),0)*100)/100}
+function chargesTotal(r){return (r.folio||[]).filter(x=>x.type==="Charge").reduce((s,x)=>s+x.amount,0)}
+function settledTotal(r){return (r.folio||[]).filter(x=>x.type==="Payment").reduce((s,x)=>s+x.amount,0)-(r.folio||[]).filter(x=>x.type==="Refund").reduce((s,x)=>s+x.amount,0)}
 function info(k,v){return '<div class="detailfield"><span>'+safe(k)+'</span><strong>'+safe(v)+'</strong></div>'}
 function openDetail(id,tab="Stay"){selectedReservation=id;detailTab=tab;page="Reservation Detail";render();window.scrollTo?.(0,0)}
 function selectDetailTab(tab){detailTab=tab;render()}
