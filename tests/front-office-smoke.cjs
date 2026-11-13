@@ -14,7 +14,7 @@ const document={
 const localStorage={memory:{},getItem(k){return this.memory[k]??null},setItem(k,v){this.memory[k]=String(v)}};
 const sandbox={document,localStorage,window:{scrollTo(){}},confirm:()=>true,setTimeout:()=>{},console,Blob,URL:{createObjectURL:()=>"",revokeObjectURL(){}}};
 vm.createContext(sandbox);
-vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1],sandbox);
+vm.runInContext(fs.readFileSync("core.js","utf8"),sandbox);
 vm.runInContext(extension,sandbox);
 const evalCode=code=>vm.runInContext(code,sandbox);
 evalCode("nav('Front Desk')");
