@@ -68,6 +68,15 @@ assert.ok(ctx.captured.fields.includes("Outstanding work"));
 const notes=e("state.hkPassdowns.length");
 ctx.captured.done({get:k=>({shift:"AM → PM",author:"Shift supervisor",text:"Follow up on outstanding turndown requests"})[k]||""});
 assert.equal(e("state.hkPassdowns.length"),notes+1,"Passdown persists");
+// Checkout queues an actual departure turnover for Housekeeping.
+const departing=e("state.reservations.find(r=>r.status==='Checked in').id");
+const departureRoom=e("state.reservations.find(r=>r.id==="+departing+").room");
+e("changeReservation("+departing+",'Checked out')");
+assert.equal(e("hkRoom("+departureRoom+").status"),"dirty","Checkout leaves room dirty");
+assert.equal(e("hkJob("+departureRoom+").stage"),"Unassigned","Checkout opens cleaning task");
+assert.equal(e("hkJob("+departureRoom+").kind"),"Departure","Checkout is a departure turnover");
+assert.equal(e("markReady("+departureRoom+")"),false,"Legacy ready shortcut cannot bypass inspection");
+assert.equal(e("hkRoom("+departureRoom+").status"),"dirty","Room remains unavailable until inspected");
 e("resetDemo()");
 assert.equal(e("state.hkJobs.length"),120,"Reset restores Housekeeping metadata without duplication");
 assert.equal(e("state.hkPassdowns.length"),1,"Reset restores demonstration passdown");
