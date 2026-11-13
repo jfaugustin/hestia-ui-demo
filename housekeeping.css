@@ -1,0 +1,39 @@
+/* Standalone Housekeeping department */
+.hk-shell{max-width:1240px;margin:0 auto}
+.hk-hero{display:flex;gap:14px;align-items:start;justify-content:space-between;margin-bottom:20px}
+.hk-hero h1{font:normal 31px Georgia,serif;color:#243d4c;margin:5px 0 8px}
+.hk-hero p{color:#7c8e9c;font-size:13px;line-height:1.5}
+.hk-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.hk-metrics>div{background:white;border:1px solid #e1e8ec;border-radius:11px;padding:15px}
+.hk-metrics strong{display:block;font:28px Georgia,serif;color:#263c4a}
+.hk-metrics span{display:block;color:#8394a1;font-size:11px;margin-top:6px;line-height:1.4}
+.hk-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.hk-btn{border:1px solid #dbe4e9;border-radius:8px;padding:9px 11px;color:#254356;background:#fff;font-size:12px;white-space:nowrap;font-weight:600}
+.hk-btn.primary{background:#234355;color:#fff;border-color:#234355}
+.hk-btn:focus-visible,.hk-tabs button:focus-visible{outline:2px solid #c19a67;outline-offset:2px}
+.hk-tabs{display:flex;gap:7px;overflow:auto;padding:0 0 11px;margin-bottom:12px;scrollbar-width:none}
+.hk-tabs button{background:transparent;border:1px solid transparent;padding:10px 12px;color:#778b9a;font-size:12px;white-space:nowrap;border-radius:8px;font-weight:650}
+.hk-tabs button.active{background:#e8eff2;color:#294454;border-color:#dbe5ec}
+.hk-card{background:#fff;border:1px solid #e3e9ee;border-radius:12px;padding:15px;min-width:0}
+.hk-filters{display:flex;gap:9px;margin-bottom:13px;flex-wrap:wrap}
+.hk-filters input,.hk-filters select{font-size:12px;padding:11px;border:1px solid #dce4e9;border-radius:8px;background:#fff;color:#243b49;flex:1;min-width:170px}
+.hk-filters input{flex:2}
+.hk-list{max-height:660px;overflow:auto}
+.hk-item{display:flex;align-items:center;justify-content:space-between;gap:13px;padding:14px 0;border-bottom:1px solid #eef1f4}
+.hk-item:last-child{border-bottom:none}
+.hk-item strong{font-size:13px;color:#2b4555}
+.hk-muted{color:#8092a0;font-size:11px;line-height:1.5;margin-top:5px}
+.hk-pill{padding:4px 7px;background:#f0f4f7;border-radius:5px;color:#697e8d;font-size:10px;margin-left:6px}
+.hk-subtitle{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:3px 0 11px;border-bottom:1px solid #e9eef0}
+.hk-subtitle strong{font-size:14px;color:#2b4654}
+.hk-subtitle span{font-size:11px;color:#8193a0}
+.hk-empty{padding:30px 12px;text-align:center;color:#8293a0;font-size:12px}
+.hk-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hk-notice{background:#f3f7fa;color:#567083;padding:12px;border-radius:9px;font-size:12px;margin-top:13px;line-height:1.6}
+.hk-note{padding:14px 0;border-bottom:1px solid #e8edf1}
+.hk-note:last-child{border:0}
+.hk-note strong{color:#2e4755;font-size:12px}
+.hk-note p{color:#5f7484;line-height:1.6;font-size:12px;margin-top:9px;white-space:pre-wrap;overflow-wrap:anywhere}
+.hk-foot{font-size:11px;color:#7f919f;line-height:1.6;margin-top:14px}
+@media(max-width:900px){.hk-two{grid-template-columns:1fr}}
+@media(max-width:700px){.hk-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-metrics>div{padding:12px}.hk-metrics strong{font-size:25px}.hk-hero{flex-direction:column}.hk-hero h1{font-size:27px}.hk-card{padding:12px}.hk-item{align-items:flex-start;flex-direction:column}.hk-actions{justify-content:flex-start}.hk-filters input{min-width:100%}}
