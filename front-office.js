@@ -36,7 +36,7 @@ const fo3Due=t=>{
 function fo3Seed(){
  if(state.fo3Version)return;
  const sample=Object.keys(FO3_SERVICES).filter(k=>!["Bell pickup","Live checkout","IRD delivery"].includes(k));
- const rooms=[206,208,214,219,306,311,322,405,411,425,507,513,522,605,613,627,703,717];
+ const rooms=[206,208,214,219,306,311,322,405,411,425,507,513,522,605,613,627,528,622];
  sample.forEach((kind,i)=>{
   const spec=FO3_SERVICES[kind],room=rooms[i%rooms.length];
   const r=state.reservations.find(x=>Number(x.room)===room);
