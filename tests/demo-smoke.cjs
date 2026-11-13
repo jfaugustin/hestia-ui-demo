@@ -152,4 +152,30 @@ evaluate("dxSetRole('viewer')");
 assert.equal(evaluate("dxAssign("+cleanAssignTicket+",'em-120')"),false,"Even unchanged assignments require permission");
 evaluate("dxSetRole('dispatcher')");
 
+
+/* Stability checks for corrected dashboard, SLA reads and assignment identity. */
+evaluate("dxSetRole('dispatcher')");
+const knownOpen=evaluate("state.tickets.filter(t=>!['Completed','Voided'].includes(t.status)).length");
+const overviewMarkup=evaluate("overview()");
+assert.ok(overviewMarkup.includes("Open service tickets"),"Overview renders correct ticket summary");
+assert.ok(overviewMarkup.includes('>'+knownOpen+'</'),"Overview count excludes completed and voided tickets");
+assert.match(evaluate("DEMO_DATE"),/^\d{4}-\d{2}-\d{2}$/);
+const auditBefore=evaluate("state.tickets.reduce((n,t)=>n+t.history.length,0)");
+evaluate("dxEscalations()");
+evaluate("dxEscalations()");
+assert.equal(evaluate("state.tickets.reduce((n,t)=>n+t.history.length,0)"),auditBefore,"Reading overdue tickets does not change audit records");
+const unconfirmed=evaluate("state.tickets.find(t=>t.employeeId&&!t.acknowledgedAt&&['Open','Stopped'].includes(t.status))?.id");
+if(unconfirmed){
+ assert.equal(evaluate("svcChange("+unconfirmed+",'Start','')"),false,"Direct transition cannot bypass acknowledgment");
+ const assigned=evaluate("state.tickets.find(t=>t.id==="+unconfirmed+").employeeId");
+ evaluate("dxSetRole('staff')");
+ assert.equal(evaluate("dxAck("+unconfirmed+")"),false,"Unidentified staff cannot acknowledge");
+ evaluate("dxActAs("+JSON.stringify(assigned)+")");
+ assert.equal(evaluate("dxAck("+unconfirmed+")"),true,"Only acting assigned employee can acknowledge");
+}
+evaluate("dxSetRole('viewer')");
+const viewerTicket=evaluate("state.tickets.find(t=>t.status==='Open')?.id");
+assert.equal(evaluate("svcChange("+viewerTicket+",'Start','')"),false,"Viewer cannot bypass transition permissions");
+evaluate("dxSetRole('dispatcher')");
+
 console.log("PASS: Hestia demo syntax, 11 views, 5 stay tabs, checkout gate, mock authorizations/captures/refunds.");
