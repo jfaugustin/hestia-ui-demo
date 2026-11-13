@@ -683,5 +683,21 @@ const dxNavBefore=nav;
 nav=function(name){if(name==="Service Dispatch")svcSelected=null;dxNavBefore(name)};
 dxBootstrap();
 
+
+/* Offline static shell and same-browser cross-tab state refresh; not multi-user sync */
+if(typeof navigator!=="undefined" && navigator.serviceWorker){
+ navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+if(typeof window!=="undefined" && typeof window.addEventListener==="function"){
+ window.addEventListener("storage",event=>{
+  if(event.key!==KEY||!event.newValue)return;
+  try{
+   const snapshot=JSON.parse(event.newValue);
+   if(!snapshot||!Array.isArray(snapshot.tickets)||!Array.isArray(snapshot.rooms))return;
+   state=snapshot;render();
+  }catch(_){}
+ });
+}
+
 render();
 </script></body></html>
