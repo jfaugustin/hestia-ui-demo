@@ -1,7 +1,9 @@
 /* Housekeeping department — synthetic, browser-local operational workflows. */
 const HK_STAGES=["Unassigned","Assigned","In progress","Awaiting inspection","Ready","On hold"];
 const HK_SERVICE_TYPES=["Extra towels","Extra linens","Turndown service","Pillows and bedding","Bathroom amenities","Room refresh","Deep cleaning","Spill cleanup","Laundry pickup","DND follow-up"];
-let hkTab="Board",hkFilter="Needs attention",hkSearch="";
+let hkTab="Board",hkFilter="Needs attention",hkSearch="",hkRole="Supervisor",hkSelectedStaff="";
+const HK_INSPECTION=["Bathroom and fixtures","Linens and bedding","Amenities and supplies","Surfaces and floors","Maintenance / safety","Final presentation"];
+const HK_CREDITS={Departure:3,Stayover:2,Turndown:1,"Deep clean":5};
 function hkRoom(id){return state.rooms.find(r=>Number(r.id)===Number(id))}
 function hkJob(id){return state.hkJobs?.find(j=>Number(j.room)===Number(id))}
 function hkStaff(){return (state.dxEmployees||[]).filter(e=>e.team==="Housekeeping")}
@@ -41,6 +43,12 @@ function hkSeed(){
   if(!HK_STAGES.includes(j.stage))j.stage="Unassigned";
   if(!j.priority)j.priority="Normal";
  });
+ state.hkJobs.forEach(j=>{
+  if(!j.checklist||typeof j.checklist!=="object")j.checklist={};
+  if(!j.cleanliness)j.cleanliness=j.stage==="Ready"?"Clean":j.stage==="Awaiting inspection"?"Inspection":"Dirty";
+  if(!j.maintenanceBlocks)j.maintenanceBlocks=[];
+  if(!j.serviceWindow)j.serviceWindow="";
+ });
  if(!Array.isArray(state.hkPassdowns))state.hkPassdowns=[];
  if(!state.hkDemoSeeded){
   state.hkPassdowns.push({at:new Date().toISOString(),shift:"AM → PM",author:"Demo supervisor",text:"Sample handover: verify late checkout rooms, outstanding turndown requests, and pending inspections."});
@@ -66,28 +74,29 @@ function hkUpdate(id,action,value=""){
   job.stage="In progress";job.startedAt=new Date().toISOString();hkLog(job,"Cleaning started",hkOwner(job));
  }else if(action==="Submit"){
   if(job.stage!=="In progress"){flash("Start cleaning before submitting");return false}
-  job.stage="Awaiting inspection";job.finishedAt=new Date().toISOString();hkLog(job,"Submitted for inspection","Cleaning completed; awaiting supervisor review");
+  job.stage="Awaiting inspection";job.cleanliness="Inspection";job.checklist={};job.finishedAt=new Date().toISOString();hkLog(job,"Submitted for inspection","Cleaning completed; awaiting supervisor review");
  }else if(action==="Approve"){
   if(job.stage!=="Awaiting inspection"){flash("Room must be submitted for inspection");return false}
-  job.stage="Ready";job.inspectedAt=new Date().toISOString();job.inspectionRequired=false;
+  if(!hkCanInspect(job)){flash("Complete all inspection checks and resolve maintenance holds");return false}
+  job.stage="Ready";job.cleanliness="Clean";job.inspectedAt=new Date().toISOString();job.inspectedBy=hkRole+" (demo)";job.inspectionRequired=false;
   // Occupied stayover rooms remain occupied; departure turnovers become available.
   if(room.status==="dirty")room.status="ready";
   hkLog(job,"Inspection passed","Room cleared for Front Office");
  }else if(action==="Fail"){
   if(job.stage!=="Awaiting inspection"||!String(value).trim()){flash("Inspection failure requires a reason");return false}
-  job.stage="Assigned";job.inspectionRequired=true;hkLog(job,"Inspection failed",String(value).trim());
+  job.stage="Assigned";job.cleanliness="Dirty";job.checklist={};job.inspectionRequired=true;hkLog(job,"Inspection failed",String(value).trim());
  }else if(action==="Hold"){
   if(!["Unassigned","Assigned","In progress","Awaiting inspection"].includes(job.stage)||!String(value).trim()){flash("Hold reason required");return false}
-  job.stage="On hold";job.holdReason=String(value).trim();hkLog(job,"On hold",job.holdReason);
+  job.stage="On hold";job.cleanliness="Dirty";job.holdReason=String(value).trim();hkLog(job,"On hold",job.holdReason);
  }else if(action==="Resume"){
   if(job.stage!=="On hold"||closed){flash("Resolve out-of-order status before resuming");return false}
   job.stage=job.assigneeId?"Assigned":"Unassigned";job.holdReason="";hkLog(job,"Resumed","Returned to cleaning queue");
  }else if(action==="Service"){
   if(room.status==="out"){flash("Room is out of order");return false}
   if(job.stage!=="Ready"){flash("Room already has a cleaning workflow");return false}
-  job.kind=value==="Stayover"?"Stayover":"Departure";
-  job.stage="Unassigned";job.assigneeId=null;job.inspectionRequired=true;job.startedAt=null;job.finishedAt=null;job.inspectedAt=null;
-  if(job.kind==="Departure")room.status="dirty";
+  job.kind=["Stayover","Turndown","Deep clean"].includes(value)?value:"Departure";
+  job.stage="Unassigned";job.cleanliness="Dirty";job.checklist={};job.assigneeId=null;job.inspectionRequired=true;job.startedAt=null;job.finishedAt=null;job.inspectedAt=null;
+  if(job.kind==="Departure"&&room.status!=="occupied")room.status="dirty";
   hkLog(job,"Service requested",job.kind);
  }else return false;
  job.lastUpdate=new Date().toISOString();save();render();return true;
@@ -103,7 +112,7 @@ function hkPrompt(id,action){
   '<label>Documented reason<input name="reason" required maxlength="400" placeholder="Describe the issue"></label>',
   f=>{if(hkUpdate(id,action,String(f.get("reason")||"")))closeModal()});
  }else if(action==="Service"){
-  modal("Schedule room "+id+" cleaning",'<label>Cleaning type<select name="kind"><option>Departure</option><option>Stayover</option></select></label>',
+  modal("Schedule room "+id+" cleaning",'<label>Cleaning type<select name="kind"><option>Departure</option><option>Stayover</option><option>Turndown</option><option>Deep clean</option></select></label>',
   f=>{if(hkUpdate(id,"Service",String(f.get("kind")||"Departure")))closeModal()});
  }else hkUpdate(id,action);
 }
@@ -112,7 +121,7 @@ function hkMarkDeparture(id){
  if(!job||!room)return false;
  // Front Office checkout opens a new room-turnover workflow. No separate room database.
  room.status="dirty";
- job.kind="Departure";job.stage="Unassigned";job.assigneeId=null;
+ job.kind="Departure";job.stage="Unassigned";job.cleanliness="Dirty";job.checklist={};job.assigneeId=null;
  job.startedAt=null;job.finishedAt=null;job.inspectedAt=null;
  job.inspectionRequired=true;job.holdReason="";
  job.lastUpdate=new Date().toISOString();
@@ -125,7 +134,7 @@ function hkSyncFromRooms(){
  for(const r of state.rooms){
   if(exists.has(r.id))continue;
   state.hkJobs.push({room:r.id,kind:"Departure",stage:r.status==="dirty"?"Unassigned":r.status==="out"?"On hold":"Ready",assigneeId:null,
-   priority:"Normal",inspectionRequired:r.status==="dirty",history:[],lastUpdate:new Date().toISOString()});
+   priority:"Normal",inspectionRequired:r.status==="dirty",cleanliness:r.status==="dirty"?"Dirty":"Clean",checklist:{},maintenanceBlocks:[],history:[],lastUpdate:new Date().toISOString()});
  }
 }
 function hkServiceRequest(){
@@ -226,4 +235,128 @@ function hkPage(){
  (hkTab==="Board"?hkBoard():hkTab==="Requests"?hkRequests():hkTab==="Team"?hkTeam():hkPassdown())+
  '<p class="hk-foot">Shared room status: a completed departure-room inspection updates Front Office room readiness. Occupied stayover rooms remain occupied. Synthetic browser-local demonstration.</p></section>';
 }
+
+/* Housekeeping V2 — role-aware tasks, room prioritization, and inspection safety. */
+function hkIsLeader(){return hkRole==="Supervisor"||hkRole==="Manager"}
+function hkSetRole(role){if(!["Supervisor","Manager","Attendant"].includes(role))return;hkRole=role;hkTab=role==="Attendant"?"Board":hkTab;if(role==="Attendant"&&!hkSelectedStaff)hkSelectedStaff=hkStaff()[0]?.id||"";render()}
+function hkSetStaff(id){if(hkStaff().some(e=>e.id===id)){hkSelectedStaff=id;render()}}
+function hkOccupancy(id){
+ const room=hkRoom(id);
+ if(!room)return "Unknown";
+ if(state.reservations.some(x=>Number(x.room)===Number(id)&&x.status==="Checked in"))return "Occupied";
+ if(room.status==="occupied")return "Occupied";
+ return "Vacant";
+}
+function hkCleanliness(job){return job.cleanliness||((job.stage==="Ready")?"Clean":(job.stage==="Awaiting inspection")?"Inspection":"Dirty")}
+function hkRestrictions(job){
+ const room=hkRoom(job.room);
+ const active=(job.maintenanceBlocks||[]).filter(id=>{
+  const t=dxTicket(id);
+  return t&&!["Completed","Voided"].includes(t.status);
+ });
+ return {out:room?.status==="out",active};
+}
+function hkCanInspect(job){
+ if(!hkIsLeader()||job.stage!=="Awaiting inspection")return false;
+ const restriction=hkRestrictions(job);
+ return !restriction.out&&!restriction.active.length&&HK_INSPECTION.every(k=>job.checklist?.[k]===true);
+}
+function hkCheck(id,key,value){
+ const job=hkJob(id);if(!job||!hkIsLeader()||job.stage!=="Awaiting inspection"||!HK_INSPECTION.includes(key))return false;
+ if(!job.checklist)job.checklist={};
+ job.checklist[key]=Boolean(value);save();render();return true;
+}
+function hkInspection(id){
+ const j=hkJob(id);if(!j||j.stage!=="Awaiting inspection"||!hkIsLeader())return flash("Inspection requires a supervisor and submitted room");
+ const checks=HK_INSPECTION.map((name,i)=>'<label class="hk-check"><input type="checkbox" name="inspection'+i+'" '+(j.checklist?.[name]?"checked":"")+'><span>'+safe(name)+'</span></label>').join("");
+ const blocks=hkRestrictions(j);
+ modal("Inspect room "+id,'<div class="hk-inspect-summary">Room '+id+' · '+safe(j.kind)+' · '+safe(hkOwner(j))+'</div>'+
+ (blocks.out||blocks.active.length?'<div class="hk-notice">Room restriction: '+(blocks.out?"Out of order":blocks.active.length+" unresolved Engineering work order(s)")+'</div>':"")+
+ '<div class="hk-checklist">'+checks+'</div><p class="hk-hint">All checks must pass before the room can be released. If any item fails, use “Fail inspection” on the board and document the deficiency.</p>',
+ f=>{
+  j.checklist={};
+  HK_INSPECTION.forEach((name,i)=>{j.checklist[name]=f.get("inspection"+i)!==null});
+  save();
+  if(hkUpdate(id,"Approve"))closeModal();
+ });
+}
+function hkArrivalTarget(job){
+ const arrivals=state.reservations.filter(r=>Number(r.room)===Number(job.room)&&r.status==="Reserved"&&r.arrival>=DEMO_DATE);
+ return arrivals.sort((a,b)=>String(a.arrival).localeCompare(String(b.arrival)))[0]||null;
+}
+function hkPriority(job){
+ const arrival=hkArrivalTarget(job),restriction=hkRestrictions(job);
+ const t=arrival?.arrival||null;
+ const urgent=t===DEMO_DATE&&job.stage!=="Ready";
+ const vip=Boolean(arrival?.vip||arrival?.profile?.vip);
+ return {tier:restriction.out||restriction.active.length?3:urgent?0:vip?1:job.priority==="High"?1:2,
+  label:restriction.out||restriction.active.length?"Restricted":urgent?"Arrival today":vip?"VIP arrival":job.priority==="High"?"High":"Routine",
+  arrival:arrival?.arrival||null};
+}
+function hkCredits(j){return HK_CREDITS[j.kind]||3}
+function hkCurrentLoad(employeeId){return state.hkJobs.filter(j=>j.assigneeId===employeeId&&!["Ready","On hold"].includes(j.stage)).reduce((sum,j)=>sum+hkCredits(j),0)}
+function hkFloor(roomId){return Math.floor(Number(roomId)/100)}
+function hkSuggestAssignee(job){
+ const candidates=hkStaff().filter(e=>e.available);
+ if(!candidates.length)return null;
+ return candidates.sort((a,b)=>{
+  const aFloor=state.hkJobs.filter(j=>j.assigneeId===a.id&&!["Ready","On hold"].includes(j.stage)&&hkFloor(j.room)===hkFloor(job.room)).length;
+  const bFloor=state.hkJobs.filter(j=>j.assigneeId===b.id&&!["Ready","On hold"].includes(j.stage)&&hkFloor(j.room)===hkFloor(job.room)).length;
+  return (hkCurrentLoad(a.id)-Math.min(2,aFloor))-(hkCurrentLoad(b.id)-Math.min(2,bFloor))||a.name.localeCompare(b.name);
+ })[0];
+}
+function hkAutoAllocate(){
+ if(!hkIsLeader())return false;
+ let count=0;
+ const list=state.hkJobs.filter(j=>j.stage==="Unassigned"&&!hkRestrictions(j).out&&!hkRestrictions(j).active.length)
+  .sort((a,b)=>hkPriority(a).tier-hkPriority(b).tier||a.room-b.room);
+ for(const job of list){
+  const employee=hkSuggestAssignee(job);
+  if(!employee)break;
+  job.assigneeId=employee.id;job.stage="Assigned";job.lastUpdate=new Date().toISOString();
+  hkLog(job,"Workload allocation",employee.name+" · "+hkCredits(job)+" credits · supervisor reviewable");
+  count++;
+ }
+ save();render();flash(count+" rooms allocated using available workload");return count;
+}
+function hkReportDefect(id){
+ const job=hkJob(id),r=hkRoom(id);
+ if(!job||!r)return;
+ modal("Report maintenance issue · Room "+id,
+ '<label>Issue description<input name="issue" required maxlength="400" placeholder="What needs to be repaired?"></label>'+
+ '<label>Safety or room-release restriction<select name="block"><option value="yes">Block room release</option><option value="no">Non-blocking repair</option></select></label>',
+ f=>{
+  const issue=String(f.get("issue")||"").trim(),block=f.get("block")==="yes";
+  if(!issue)return flash("Describe the issue");
+  const idNew=Math.max(88000,...state.tickets.map(x=>Number(x.id)||0))+1,now=new Date().toISOString();
+  const ticket={id:idNew,title:"Room "+id+" · "+issue.slice(0,90),team:"Engineering",category:"Maintenance defect",
+   room:id,location:"Room "+id,priority:block?"High":"Normal",description:issue,status:"Open",
+   assignee:"Unassigned",employeeId:null,createdAt:now,dueAt:new Date(Date.now()+30*60000).toISOString(),
+   history:[],notes:[],links:[],attachments:[],hkBlockRoom:block};
+  state.tickets.unshift(ticket);
+  if(block){job.maintenanceBlocks=job.maintenanceBlocks||[];job.maintenanceBlocks.push(ticket.id)}
+  hkLog(job,"Engineering work requested",ticket.title+(block?" · room release blocked":""));
+  dxEvent(ticket,"Created","Housekeeping reported maintenance defect");
+  save();closeModal();render();flash("Engineering request #"+idNew+" created");
+ });
+}
+function hkRoleActions(job,r){
+ const buttons=[];
+ if(hkRole==="Attendant"){
+  if(job.assigneeId!==hkSelectedStaff)return "";
+  if(job.stage==="Assigned")buttons.push(["Start","Start cleaning"]);
+  if(job.stage==="In progress")buttons.push(["Submit","Submit to supervisor"]);
+ }else{
+  if(job.stage==="Unassigned")buttons.push(["Assign","Assign"]);
+  if(job.stage==="Assigned")buttons.push(["Assign","Reassign"],["Start","Start"]);
+  if(job.stage==="In progress")buttons.push(["Submit","Submit"]);
+  if(job.stage==="Awaiting inspection")buttons.push(["Inspect","Inspect"],["Fail","Fail"]);
+  if(job.stage==="On hold"&&r.status!=="out")buttons.push(["Resume","Resume"]);
+  if(job.stage==="Ready")buttons.push(["Service","New clean"]);
+  if(!["Ready","On hold"].includes(job.stage))buttons.push(["Hold","Hold"]);
+ }
+ const html=buttons.map(([action,label])=>'<button class="hk-btn'+(["Start","Submit","Inspect"].includes(action)?" primary":"")+'" onclick="'+(action==="Inspect"?"hkInspection("+job.room+")":"hkPrompt("+job.room+",'"+action+"')")+'">'+label+'</button>').join("");
+ return html+'<button class="hk-btn" onclick="hkReportDefect('+job.room+')">Repair</button>';
+}
+
 hkSeed();
