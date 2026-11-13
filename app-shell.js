@@ -124,12 +124,12 @@ nav=function(next){
  if(next==="Operations")h4OpsMode="Summary";
  h4PreviousNav(next);
 };
-const h4PreviousReset=resetDemo;
 resetDemo=function(){
  if(!confirm("Reset all synthetic hotel records in this browser?"))return;
  state=seed();
- enrichDemo();svcSeed();foInit();dxBootstrap();dcStaffBootstrap();fo3Seed();
+ enrichDemo();svcSeed();foInit();dxBootstrap();dcStaffBootstrap();fo3Seed();migrateLegacyDemoDates();
  selectedReservation=null;svcSelected=null;
+ h4RoomFilter="All";h4RoomMode="Rooms";h4StayMode="Reservations";h4OpsMode="Summary";
  page="Overview";save();render();flash("Demo reset to sample data");
 };
 render();
