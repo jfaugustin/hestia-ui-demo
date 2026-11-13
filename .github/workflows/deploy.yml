@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'core.js'
+      - 'core.css'
       - 'front-office.js'
       - 'front-office.css'
       - 'app-shell.js'
