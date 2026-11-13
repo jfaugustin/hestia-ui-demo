@@ -41,7 +41,7 @@ function h4Overview(){
  const requests='<div class="h4-card"><h2>Priority requests</h2>'+
  (next.length?next.map(t=>'<div class="h4-queue"><div><b>'+safe(t.title)+'</b><small>'+safe(t.team)+' · '+safe(t.location||"Property")+' · '+safe(t.status)+'</small></div><button onclick="svcOpen('+t.id+')">Open</button></div>').join(""):'<div class="h4-empty">No active requests</div>')+
  '<div style="margin-top:12px">'+h4Btn("All requests","nav('Service Dispatch')")+'</div></div>';
- const rooms='<div class="h4-card"><h2>Today's operations</h2>'+
+ const rooms='<div class="h4-card"><h2>Today’s operations</h2>'+
  '<div class="h4-queue"><div><b>Arrivals</b><small>'+arrivals.length+' reservations due today</small></div>'+h4Btn("View","nav('Reservations')")+'</div>'+
  '<div class="h4-queue"><div><b>Guest service</b><small>'+needs.length+' requests unassigned or past target</small></div>'+h4Btn("Open","nav('Front Desk')")+'</div>'+
  '<div class="h4-queue"><div><b>Housekeeping</b><small>'+dirty.length+' rooms need attention</small></div>'+h4Btn("View","h4SwitchRoom('Housekeeping')")+'</div>'+
