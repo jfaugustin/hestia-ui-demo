@@ -126,10 +126,6 @@ function reservations(){
  '<div class="statstrip"><div><strong>'+state.reservations.length+'</strong><span>Total bookings</span></div><div><strong>'+active+'</strong><span>Active / upcoming</span></div><div><strong>'+state.reservations.filter(r=>r.status==="Checked in").length+'</strong><span>In house</span></div></div>'+
  panel("Reservations",'<div class="resultbar"><input id="reservationSearch" aria-label="Search reservations" placeholder="Search guest, confirmation, room" value="'+safe(reservationSearch)+'"><span class="muted">'+rows.length+' matches</span></div><div class="tablewrap"><table><thead><tr><th>Confirmation</th><th>Guest</th><th>Room</th><th>Arrival</th><th>Departure</th><th>Status</th><th>Folio</th></tr></thead><tbody>'+rows.map(r=>'<tr><td><button class="clickable" onclick="openDetail('+r.id+')">'+safe(r.confirmation)+'</button></td><td>'+safe(r.guest)+'</td><td>'+r.room+'</td><td>'+r.arrival+'</td><td>'+r.departure+'</td><td>'+pill(r.status)+'</td><td class="money">'+fmtMoney(folioBalance(r))+'</td></tr>').join("")+'</tbody></table></div>');
 }
-function desk(){
- const rows=state.reservations.filter(r=>["Reserved","Checked in"].includes(r.status));
- return header("Front Desk","Reservations and departures with folio settlement checks.")+panel("Front desk queue",'<div class="tablewrap"><table><thead><tr><th>Guest</th><th>Room</th><th>Status</th><th>Balance</th><th>Action</th></tr></thead><tbody>'+rows.map(r=>'<tr><td><button class="clickable" onclick="openDetail('+r.id+')">'+safe(r.guest)+'</button></td><td>'+r.room+'</td><td>'+pill(r.status)+'</td><td>'+fmtMoney(folioBalance(r))+'</td><td>'+btn("Open stay","openDetail("+r.id+")")+'</td></tr>').join("")+'</tbody></table></div>');
-}
 function detailPage(){
  const r=state.reservations.find(x=>x.id===selectedReservation);
  if(!r)return header("Reservation not found","Return to the reservation register.")+'<button class="secondary" onclick="nav(\'Reservations\')">Back to reservations</button>';
@@ -295,7 +291,6 @@ function foDue(t){
  return m<0?"Overdue "+Math.abs(m)+"m":m===0?"Due now":"Due in "+m+"m";
 }
 function foOpen(id){svcSelected=Number(id);page="Service Dispatch";render()}
-desk=function(){return header("Front Office","Bell Service · Live Checkout · Food Delivery")};
 foInit();
 svcSeed();
 
@@ -636,7 +631,10 @@ function dcHome(){
  const current=tabs.some(x=>x[0]===dxTab)?dxTab:"Queue";
  const tabbar='<div class="dc-toolbar"><div class="dc-tabs">'+tabs.map(([key,label])=>'<button class="'+(current===key?"active":"")+'" onclick="dcMainTab(\''+key+'\')">'+label+'</button>').join("")+'</div><button class="dc-btn primary" onclick="dxNewRequest(\'Front Office\')">+ New ticket</button></div>';
  const content=current==="Queue"?dcQueue():current==="Employees"?dcTeam():current==="Schedules"?dxSchedule():dxAnalytics();
- return header("Service Dispatch","Hotel-wide requests, assignments and work history.")+tabbar+content+
+ const role='<div class="dc-filters" style="margin:0 0 12px"><label class="dc-hint">Preview role <select aria-label="Preview user role" onchange="dxSetRole(this.value)">'+svcOpts(Object.keys(DX_ROLES),dxRole)+'</select></label>'+
+ (dxRole==="staff"?'<label class="dc-hint">Acting employee <select aria-label="Acting employee" onchange="dxActAs(this.value)">'+svcOpts(["",...state.dxEmployees.map(e=>e.id)],dxActingEmployeeId||"")+'</select></label>':'')+'</div>';
+ const controls='<div class="dxactions" style="margin-bottom:12px"><button class="dc-btn" onclick="dxProcessEscalations()">Process overdue alerts</button><button class="dc-btn" onclick="dxAutoDispatchQueue()">Auto-assign unassigned</button></div>';
+ return header("Service Dispatch","Hotel-wide requests, assignments and work history.")+role+tabbar+(current==="Queue"?controls:"")+content+
  '<div style="margin-top:15px" class="dc-hint">Synthetic preview · employee permissions, notifications and cross-device updates require the private backend.</div>';
 }
 function dcRow(k,v){return '<div class="dc-line"><span>'+safe(k)+'</span><strong>'+safe(v??"—")+'</strong></div>'}
@@ -666,12 +664,12 @@ function dcDetail(){
  '<div class="dc-hint" style="margin-top:12px">Attachments store file metadata only in this public demo. Do not upload sensitive information.</div>'+
  '<input type="file" id="dxFile" accept="image/*,.pdf" onchange="dxAttach('+t.id+',this)" style="margin-top:12px;max-width:100%">'+
  (t.attachments||[]).map(x=>'<div class="dc-line"><span>'+safe(x.name)+'</span><strong>'+Math.round(x.bytes/1024)+' KB</strong></div>').join(""));
- return '<div class="dc-detail-head"><button class="dc-btn" onclick="svcBack()">← All tickets</button></div>'+
+ const correction=!closed&&dxPermission("assign")?'<div class="dxactions" style="margin-bottom:12px"><button class="dc-btn" onclick="dcCorrect('+t.id+')">Correct request details</button></div>':"";
+ return correction+'<div class="dc-detail-head"><button class="dc-btn" onclick="svcBack()">← All tickets</button></div>'+
  header("Ticket #"+t.id,t.title+" · "+t.location)+
  '<div class="dc-details">'+work+panel("Assignment and actions",controls)+'</div>'+
  '<div class="dc-details dc-detail-footer">'+record+extras+'</div>';
 }
-// Replace the nested legacy detail view and duplicate assignment panels.
 function services(){return svcSelected!==null?dcDetail():dcHome()}
 
 dcStaffBootstrap();
@@ -697,23 +695,6 @@ function dcCorrect(id){
  closeModal();render();flash("Correction recorded");
  });
 }
-const dcDetailBeforeFix=dcDetail;
-dcDetail=function(){
- const original=dcDetailBeforeFix();
- const t=dxTicket(svcSelected);
- if(!t||["Completed","Voided"].includes(t.status)||!dxPermission("assign"))return original;
- return original.replace('<div class="dc-details">','<div class="dxactions" style="margin-bottom:12px"><button class="dc-btn" onclick="dcCorrect('+t.id+')">Correct request details</button></div><div class="dc-details">');
-};
-const dcHomeBeforeFix=dcHome;
-dcHome=function(){
- const s=dcHomeBeforeFix();
- const role='<div class="dc-filters" style="margin:0 0 12px"><label class="dc-hint">Preview role <select aria-label="Preview user role" onchange="dxSetRole(this.value)">'+svcOpts(Object.keys(DX_ROLES),dxRole)+'</select></label>'+
- (dxRole==="staff"?'<label class="dc-hint">Acting employee <select aria-label="Acting employee" onchange="dxActAs(this.value)">'+svcOpts(["",...state.dxEmployees.map(e=>e.id)],dxActingEmployeeId||"")+'</select></label>':'')+'</div>';
- const controls='<div class="dxactions" style="margin-bottom:12px"><button class="dc-btn" onclick="dxProcessEscalations()">Process overdue alerts</button><button class="dc-btn" onclick="dxAutoDispatchQueue()">Auto-assign unassigned</button></div>';
- return s.replace('<div class="dc-toolbar">',role+'<div class="dc-toolbar">').replace('<div class="dc-stats">',controls+'<div class="dc-stats">');
-};
-
-
 /* Correct legacy synthetic booking dates once without rewriting custom bookings. */
 function migrateLegacyDemoDates(){
  if(state.demoCalendarAligned)return;
