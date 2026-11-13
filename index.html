@@ -679,6 +679,8 @@ svcAction=function(id,action){if(!dxRequire(action==="Void"?"void":"transition")
 };
 const dxOriginalOpenTicket=openTicket;
 openTicket=function(){dxNewRequest("Engineering")};
+const dxNavBefore=nav;
+nav=function(name){if(name==="Service Dispatch")svcSelected=null;dxNavBefore(name)};
 dxBootstrap();
 
 render();
