@@ -40,6 +40,12 @@
 .foformsub{font-size:11px;color:#7d8f9b;margin-top:9px}.fochip{color:#86633e;background:#faf0e2;padding:4px 7px;border-radius:5px;font-size:10px;font-weight:650}
 @media(max-width:700px){.foquick{grid-template-columns:1fr}.foquick button{min-height:75px;padding:12px}.foticket{align-items:start}.foticket .actions{justify-content:flex-end;flex-shrink:0}}
 
+
+/* Hestia Dispatch 2.0 */
+.dxchips{display:flex;gap:7px;overflow-x:auto;margin:0 0 12px}.dxchips button{white-space:nowrap;border:1px solid #dae3e9;background:#fff;padding:9px 11px;border-radius:8px;font-size:12px}.dxchips button.selected{background:#1a3343;color:#fff;border-color:#1a3343}.dxgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.dxcard{border:1px solid #e3e9ee;background:#fff;border-radius:11px;padding:14px;min-width:0}.dxcard h3{font-size:14px;margin:0 0 7px;color:#203c4d}.dxcard p{font-size:12px;color:#788e9e;line-height:1.6}.dxcard button{margin-top:10px}.dxhead{display:flex;gap:9px;align-items:center;justify-content:space-between;margin-bottom:13px}.dxstat{padding:13px 15px;border:1px solid #e2e9ee;border-radius:10px;background:#fff}.dxstat strong{display:block;font-size:23px;color:#243848}.dxstat span{display:block;font-size:11px;color:#7b91a0;margin-top:5px}.dxstats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:14px}.dxwarn{color:#9c572b;background:#fff2e5;padding:8px 10px;border-radius:6px;font-size:11px}.dxactions{display:flex;flex-wrap:wrap;gap:7px}.dxactions button{background:#f3f6f8;border:1px solid #dbe3e9;border-radius:7px;padding:9px 11px;color:#254054;font-size:12px}.dxinput{padding:10px;border:1px solid #d9e3e9;border-radius:8px;width:100%;font-size:12px}.dxsmall{font-size:11px;color:#708697}.dxlog{padding:11px 0;border-top:1px solid #e8ecf0;font-size:12px}.dxlog small{display:block;color:#7c8d99;margin-top:4px}.dxoption{padding:10px;border:1px solid #e4eaef;background:white;border-radius:9px;display:flex;justify-content:space-between;align-items:center;gap:9px}.dxoption small{color:#8295a0}.dxsection{margin-top:17px}
+@media(max-width:760px){.dxstats,.dxgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dxcard{padding:11px}.dxhead{align-items:flex-start;flex-direction:column}}
+@media(max-width:420px){.dxstats{grid-template-columns:repeat(2,minmax(0,1fr))}.dxgrid{grid-template-columns:1fr}}
+
 </style></head><body>
 <div class="mobileoverlay" id="overlay" onclick="toggleMenu(false)"></div><div class="shell"><aside class="sidebar" id="sidebar"><div class="brand">HESTIA</div><div class="tagline">HOTEL OPERATING SYSTEM</div><nav class="nav" id="nav"></nav><div class="sidefoot">DEMONSTRATION ENVIRONMENT<br>Synthetic data only · Stored in this browser<br><button class="secondary" style="margin-top:9px" onclick="resetDemo()">Reset demo</button></div></aside>
 <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="menu" onclick="toggleMenu(true)">☰</button><div><div class="prop">Grand Hotel <span style="font-weight:400;color:#8494a1">/ Demo Property</span></div><div class="tiny">Independent luxury hotel · 120 rooms</div></div></div><div class="topright"><span class="desktop subtle">Business date · November 12, 2026</span><span>◉</span><div class="avatar">HM</div></div></header><div class="content" id="content"></div></main></div><div id="modalroot"></div>
@@ -454,6 +460,226 @@ function foFromReservation(id){
 }
 desk=function(){return frontOfficeWorkspace()};
 foInit();
+
+
+/* Dispatch 2.0 public preview — fake identities, local records, no cross-device synchronization */
+const DX_DEPTS=["Front Office","Bell Service","Valet","Housekeeping","Engineering","Security","Food & Beverage","IT","Spa & Recreation","Management","Transportation"];
+const DX_CATEGORIES={
+ "Bell Service":["Arrival luggage","Departure luggage","Luggage storage","Vehicle loading"],
+ "Valet":["Vehicle retrieval","Vehicle staging","Parking inquiry","Vehicle damage follow-up"],
+ "Front Office":["Live checkout","Guest request","Room move","Key assistance","Wake-up call","Guest transportation"],
+ "Housekeeping":["Room cleaning","Turndown","Linen request","Amenity delivery","Room inspection"],
+ "Engineering":["Plumbing","HVAC","Electrical","Preventive maintenance","Equipment inspection"],
+ "Security":["Escort","Access assistance","Lost property","Security concern","Safety inspection"],
+ "Food & Beverage":["Food delivery","IRD pickup","Amenity delivery","Restaurant assistance"],
+ "IT":["Wi-Fi","Telephone","Room technology","Network equipment"],
+ "Spa & Recreation":["Spa guest support","Pool maintenance","Guest amenities"],
+ "Management":["Service recovery","Escalated complaint","Approval required"],
+ "Transportation":["House car","Driver assignment","Airport transfer"]
+};
+const DX_ROLES={dispatcher:["create","assign","ack","transition","void","escalate","notes","schedule"],supervisor:["create","assign","ack","transition","void","escalate","notes","schedule"],staff:["create","ack","transition","notes"],viewer:[]};
+let dxRole="dispatcher",dxDepartment="All",dxTab="Queue",dxSearch="",dxStaff="All";
+function dxEmployees(){
+ return [{id:"em-100",name:"Alex Rivera",team:"Bell Service",shift:"AM",available:true},
+ {id:"em-101",name:"Morgan Lee",team:"Front Office",shift:"PM",available:true},
+ {id:"em-102",name:"Taylor Singh",team:"Housekeeping",shift:"AM",available:true},
+ {id:"em-103",name:"Jordan Kim",team:"Engineering",shift:"PM",available:true},
+ {id:"em-104",name:"Casey Patel",team:"Security",shift:"PM",available:false},
+ {id:"em-105",name:"Avery Brooks",team:"Valet",shift:"PM",available:true},
+ {id:"em-106",name:"Emery Chen",team:"Food & Beverage",shift:"PM",available:true},
+ {id:"em-107",name:"Sam Morgan",team:"IT",shift:"AM",available:true},
+ {id:"em-108",name:"Riley Price",team:"Transportation",shift:"AM",available:true},
+ {id:"em-109",name:"Jamie Stone",team:"Spa & Recreation",shift:"AM",available:true}];
+}
+function dxBootstrap(){
+ if(!state.dxEmployees)state.dxEmployees=dxEmployees();
+ if(!Array.isArray(state.dxRecurring))state.dxRecurring=[
+ {id:71001,title:"AED weekly inspection",team:"Security",category:"Safety inspection",priority:"High",interval:7,last:"2026-11-06",enabled:true},
+ {id:71002,title:"Preventive HVAC inspection",team:"Engineering",category:"Preventive maintenance",priority:"Normal",interval:7,last:"2026-11-06",enabled:true},
+ {id:71003,title:"Morning room readiness review",team:"Housekeeping",category:"Room inspection",priority:"Normal",interval:1,last:"2026-11-11",enabled:true},
+ {id:71004,title:"Valet radio inventory",team:"Valet",category:"Parking inquiry",priority:"Low",interval:7,last:"2026-11-06",enabled:true}
+ ];
+ if(!state.dxVersion){
+   const additions=[
+    ["Valet","Vehicle retrieval","Vehicle staging request",318],
+    ["Transportation","House car","Guest house car pickup",421],
+    ["Housekeeping","Turndown","Evening turndown service",504],
+    ["IT","Wi-Fi","Guest Wi-Fi assistance",307],
+    ["Spa & Recreation","Pool maintenance","Rooftop pool equipment check",0],
+    ["Management","Service recovery","Guest service recovery follow-up",205],
+    ["Front Office","Room move","Coordinate luggage and room move",409]
+   ];
+   additions.forEach((x,i)=>{let [team,category,title,room]=x;let now=new Date(Date.now()-(i+2)*480000).toISOString();
+     state.tickets.push({id:72000+i,team,category,title,room:room||null,location:room?"Room "+room:"Rooftop",priority:i===5?"High":"Normal",status:"Open",assignee:"Unassigned",description:"Synthetic cross-department service request.",createdAt:now,dueAt:new Date(Date.now()+(i+1)*240000).toISOString(),history:[{event:"Created",at:now,by:"Demo system",note:"Dispatch 2.0 sample"}],notes:[],attachments:[],links:[]});
+   });state.dxVersion=true;
+ }
+ state.tickets.forEach(t=>{if(!t.attachments)t.attachments=[];if(!t.links)t.links=[];if(!t.category)t.category=t.requestType||t.team||"General";if(!t.acknowledgedAt)t.acknowledgedAt=null;if(!t.dueAt)t.dueAt=new Date(Date.parse(t.createdAt||new Date().toISOString())+30*60000).toISOString()});
+ save();
+}
+function dxPermission(a){return !!DX_ROLES[dxRole]?.includes(a)}
+function dxRequire(a){if(dxPermission(a))return true;flash("This demo role cannot perform that action");return false}
+function dxTicket(id){return state.tickets.find(t=>Number(t.id)===Number(id))}
+function dxEvent(t,label,note=""){t.history.push({event:label,note,by:"Demo "+dxRole,at:new Date().toISOString()});activity("#"+t.id+" "+label);save()}
+function dxAssign(id,employeeId){
+ if(!dxRequire("assign"))return false;
+ const t=dxTicket(id),worker=state.dxEmployees.find(x=>x.id===employeeId);
+ if(!t||["Completed","Voided"].includes(t.status))return false;
+ if(worker&&!worker.available){flash("Employee is not marked available");return false}
+ if(worker&&worker.team!==t.team){flash("Assignee department does not match ticket department");return false}
+ t.assignee=worker?worker.name:"Unassigned";t.employeeId=worker?.id||null;t.acknowledgedAt=null;
+ dxEvent(t,"Assigned",t.assignee+" · awaiting acknowledgment");render();return true;
+}
+function dxAck(id){
+ if(!dxRequire("ack"))return false;
+ const t=dxTicket(id);if(!t||!t.employeeId||t.acknowledgedAt||["Voided","Completed"].includes(t.status))return false;
+ t.acknowledgedAt=new Date().toISOString();dxEvent(t,"Acknowledged",t.assignee+" accepted work");render();return true;
+}
+function dxTransition(id,action,note){
+ if(!dxRequire(action==="Void"?"void":"transition"))return false;
+ const t=dxTicket(id);if(!t)return false;
+ if(action==="Start"&&t.employeeId&&!t.acknowledgedAt){flash("Assigned employee must acknowledge before starting");return false}
+ return svcChange(id,action,note);
+}
+function dxLink(parent,child){
+ if(!dxRequire("create"))return false;
+ const a=dxTicket(parent),b=dxTicket(child);
+ if(!a||!b||a.id===b.id)return false;
+ if(!a.links.includes(b.id))a.links.push(b.id);
+ if(!b.links.includes(a.id))b.links.push(a.id);
+ dxEvent(a,"Linked request","#"+b.id);dxEvent(b,"Linked request","#"+a.id);render();return true;
+}
+function dxEscalations(){
+ const now=Date.now(),due=state.tickets.filter(t=>!["Voided","Completed"].includes(t.status)&&Date.parse(t.dueAt)<now);
+ due.forEach(t=>{if(t.escalated)return;t.escalated=true;dxEvent(t,"SLA escalated","Overdue ticket flagged for supervisor review")});
+ return due;
+}
+function dxTeamTag(t){return t.team==="Front Office"&&t.requestType? t.requestType:t.team}
+function dxRecurringRun(id,nowDate){
+ if(!dxRequire("schedule"))return false;
+ const rule=state.dxRecurring.find(x=>x.id===Number(id));if(!rule||!rule.enabled)return false;
+ const today=nowDate||new Date().toISOString().slice(0,10);
+ if((Date.parse(today)-Date.parse(rule.last))/86400000<rule.interval)return false;
+ const unique=rule.id+"-"+today;
+ if(state.tickets.some(t=>t.scheduleKey===unique))return false;
+ const idNew=Math.max(75000,...state.tickets.map(x=>Number(x.id)||0))+1;
+ const t={id:idNew,title:rule.title,team:rule.team,category:rule.category,priority:rule.priority,location:"Property-wide",room:null,status:"Open",assignee:"Unassigned",createdAt:new Date().toISOString(),dueAt:new Date(Date.now()+2*3600000).toISOString(),description:"Automatically generated from recurring rule #"+rule.id,history:[],notes:[],links:[],attachments:[],scheduleKey:unique};
+ state.tickets.unshift(t);rule.last=today;dxEvent(t,"Scheduled task generated","Rule "+rule.id);render();return true;
+}
+function dxCreateLinked(sourceId,team,category){
+ if(!dxRequire("create"))return;
+ const parent=dxTicket(sourceId),title=category+" · "+(parent?.location||"Property");
+ if(!parent||!DX_CATEGORIES[team]?.includes(category))return;
+ const id=Math.max(75000,...state.tickets.map(x=>Number(x.id)||0))+1;
+ const now=new Date().toISOString();
+ const t={id,title,team,category,room:parent.room,location:parent.location,guest:parent.guest||"",priority:parent.priority,status:"Open",assignee:"Unassigned",createdAt:now,dueAt:new Date(Date.now()+15*60000).toISOString(),description:"Linked request generated from #"+sourceId,notes:[],history:[],links:[],attachments:[]};
+ state.tickets.unshift(t);dxEvent(t,"Created","Linked departmental workflow");dxLink(sourceId,id);svcSelected=id;page="Service Dispatch";render();
+}
+function dxCreateLinkedPrompt(id){
+ if(!dxRequire("create"))return;
+ modal("Create linked departmental request",'<label>Department<select name="team" id="dxTeamSelect" onchange="dxFillCats(this.value)">'+DX_DEPTS.map(d=>'<option>'+safe(d)+'</option>').join("")+'</select></label><label>Request type<select name="category" id="dxCategorySelect">'+DX_CATEGORIES[DX_DEPTS[0]].map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label>',f=>{const team=String(f.get("team")),cat=String(f.get("category"));closeModal();dxCreateLinked(id,team,cat)});
+}
+function dxFillCats(team){const box=document.getElementById("dxCategorySelect");if(box)box.innerHTML=(DX_CATEGORIES[team]||[]).map(c=>'<option>'+safe(c)+'</option>').join("")}
+function dxSetRole(value){if(!DX_ROLES[value])return;dxRole=value;render()}
+function dxSetTab(value){dxTab=value;render()}
+function dxSetDept(value){dxDepartment=value;render()}
+function dxToggleEmployee(id){if(!dxRequire("assign"))return;const e=state.dxEmployees.find(x=>x.id===id);if(!e)return;e.available=!e.available;save();render()}
+function dxAssignments(){
+ const rows=state.dxEmployees.filter(e=>dxStaff==="All"||e.team===dxStaff);
+ return panel("On-duty employee dispatch",'<div class="svcbar"><select aria-label="Filter employees" onchange="dxStaff=this.value;render()">'+svcOpts(["All",...new Set(state.dxEmployees.map(e=>e.team))],dxStaff)+'</select></div><div class="dxgrid">'+rows.map(e=>{
+ const active=state.tickets.filter(t=>t.employeeId===e.id&&!["Voided","Completed"].includes(t.status));
+ return '<div class="dxcard"><div class="dxhead"><h3>'+safe(e.name)+'</h3>'+pill(e.available?"Available":"Unavailable")+'</div><p>'+safe(e.team)+' · '+safe(e.shift)+' shift</p><p>'+active.length+' assigned tickets · '+active.filter(t=>!t.acknowledgedAt).length+' awaiting acknowledgment</p><button class="secondary" onclick="dxToggleEmployee(\''+e.id+'\')">Change availability</button></div>'}).join("")+'</div>');
+}
+function dxSchedule(){
+ const rules=state.dxRecurring;
+ return panel("Recurring operational tasks",'<p class="muted" style="margin-bottom:12px">Sample schedules generate tickets on demand in this public preview. A production scheduler would generate them automatically on the server.</p>'+rules.map(x=>'<div class="dxoption"><div><strong>'+safe(x.title)+'</strong><div class="dxsmall">'+safe(x.team)+' · every '+x.interval+' day(s) · last '+safe(x.last)+'</div></div><div class="dxactions"><button onclick="dxRecurringRun('+x.id+',\''+new Date().toISOString().slice(0,10)+'\')">Generate if due</button></div></div>').join("")+'<div class="dxsection"><button class="primary" onclick="dxScheduleNew()">+ New recurring task</button></div>');
+}
+function dxScheduleNew(){
+ if(!dxRequire("schedule"))return;
+ modal("New recurring task",field("Task name","title")+'<label>Department<select name="team">'+DX_DEPTS.map(x=>'<option>'+safe(x)+'</option>').join("")+'</select></label><label>Repeat interval (days)<input name="interval" type="number" min="1" max="365" value="7"></label>',f=>{
+ const name=String(f.get("title")||"").trim(),days=Number(f.get("interval"));
+ if(!name||!Number.isInteger(days)||days<1||days>365)return flash("Enter a valid task and interval");
+ state.dxRecurring.push({id:Date.now(),title:name,team:String(f.get("team")),category:"Recurring inspection",priority:"Normal",interval:days,last:"2026-11-01",enabled:true});save();closeModal();render();
+ });
+}
+function dxAnalytics(){
+ const t=state.tickets.filter(x=>x.createdAt),closed=t.filter(x=>x.status==="Completed"),open=t.filter(x=>!["Completed","Voided"].includes(x.status)),overdue=dxEscalations();
+ const diff=x=>Math.max(0,(Date.parse(x.completedAt||x.startedAt)-Date.parse(x.createdAt))/60000);
+ const avg=closed.length?Math.round(closed.reduce((n,x)=>n+diff(x),0)/closed.length):0;
+ const total=t.length,score=total?Math.round(closed.length/total*100):0;
+ const teamStats=DX_DEPTS.map(name=>({name,tickets:t.filter(x=>x.team===name)})).filter(x=>x.tickets.length);
+ return '<div class="dxstats"><div class="dxstat"><strong>'+total+'</strong><span>Total tickets</span></div><div class="dxstat"><strong>'+score+'%</strong><span>Completed share</span></div><div class="dxstat"><strong>'+overdue.length+'</strong><span>Overdue active</span></div><div class="dxstat"><strong>'+avg+'m</strong><span>Avg completed elapsed time*</span></div></div>'+
+ panel("Departmental throughput",teamStats.map(x=>'<div class="dxoption"><strong>'+safe(x.name)+'</strong><span class="dxsmall">'+x.tickets.length+' requests · '+x.tickets.filter(x=>x.status==="Completed").length+' completed · '+x.tickets.filter(x=>x.status==="Stopped").length+' stopped</span></div>').join("")+'<p class="hint" style="margin-top:12px">*Elapsed time is not labor time. Demonstration timing and synthetic records are illustrative only.</p>');
+}
+function dxBoard(){
+ const overdue=dxEscalations(),active=state.tickets.filter(t=>!["Voided","Completed"].includes(t.status));
+ const filtered=active.filter(t=>(dxDepartment==="All"||t.team===dxDepartment)&&(t.title+" "+t.category+" "+t.location+" "+t.assignee+" "+t.id).toLowerCase().includes(dxSearch.toLowerCase()));
+ const stats='<div class="dxstats"><div class="dxstat"><strong>'+active.length+'</strong><span>Active</span></div><div class="dxstat"><strong>'+active.filter(t=>t.employeeId&&!t.acknowledgedAt).length+'</strong><span>Unacknowledged</span></div><div class="dxstat"><strong>'+active.filter(t=>t.status==="Stopped").length+'</strong><span>Stopped</span></div><div class="dxstat"><strong>'+overdue.length+'</strong><span>Overdue</span></div></div>';
+ const filters='<div class="svcbar"><input id="dxSearch" placeholder="Search dispatch queue" aria-label="Search dispatch queue" value="'+safe(dxSearch)+'"><select aria-label="Department filter" id="dxDept">'+svcOpts(["All",...DX_DEPTS],dxDepartment)+'</select></div>';
+ const rows=filtered.map(t=>{
+ const assignees=state.dxEmployees.filter(e=>e.team===t.team&&e.available);
+ return '<div class="svcrow"><div class="svcmain"><button class="svctitle" onclick="svcOpen('+t.id+')">#'+t.id+' · '+safe(t.title)+'</button><div class="svcmeta">'+safe(t.team)+' · '+safe(t.location)+' · '+safe(t.category)+' · '+safe(t.assignee)+'</div><div class="dxsmall">'+(t.acknowledgedAt?"Acknowledged "+svcTime(t.acknowledgedAt):t.employeeId?"Awaiting acknowledgment":"Unassigned")+' · Due '+svcTime(t.dueAt)+(t.escalated?' · <span class="danger">Overdue / escalated</span>':'')+'</div></div><div class="svcright">'+svcTag(t)+'<select class="dxinput" aria-label="Assign #'+t.id+'" onchange="dxAssign('+t.id+',this.value)">'+svcOpts(["Unassigned",...assignees.map(x=>x.id)],t.employeeId||"Unassigned").replace(/<option value="([^"]+)">([^<]+)<\/option>/g,(whole,value,label)=>label!=="Unassigned"?whole.replace(label,safe(state.dxEmployees.find(e=>e.id===value)?.name||label)):whole)+'</select><button class="secondary" onclick="svcOpen('+t.id+')">Open</button></div></div>';
+ }).join("");
+ return stats+panel("Live operations queue",filters+'<div class="dxsmall" style="margin-bottom:9px">'+filtered.length+' matching active tickets · local demo, not multi-user live</div>'+(rows||'<div class="empty">No tickets match</div>'));
+}
+function dxHome(){
+ return header("Dispatch Command","Unified departmental service management · synthetic demonstration")+
+ '<div class="svcbar"><select aria-label="Preview role" id="dxRole" onchange="dxSetRole(this.value)">'+svcOpts(Object.keys(DX_ROLES),dxRole)+'</select><span class="hint">Role preview only · security must be enforced by a server</span></div>'+
+ '<div class="dxchips">'+["Queue","Employees","Schedules","Analytics","Departments"].map(x=>'<button class="'+(dxTab===x?"selected":"")+'" onclick="dxSetTab(\''+x+'\')">'+x+'</button>').join("")+'</div>'+
+ (dxTab==="Queue"?dxBoard():dxTab==="Employees"?dxAssignments():dxTab==="Schedules"?dxSchedule():dxTab==="Analytics"?dxAnalytics():panel("Departmental service types",'<div class="dxgrid">'+DX_DEPTS.map(team=>'<div class="dxcard"><h3>'+safe(team)+'</h3><p>'+safe((DX_CATEGORIES[team]||[]).join(" · "))+'</p><button class="secondary" onclick="dxNewRequest(\''+team+'\')">New request</button></div>').join("")+'</div>'));
+}
+function dxNewRequest(team){
+ if(!dxRequire("create"))return;
+ team=DX_CATEGORIES[team]?team:"Front Office";
+ const category=DX_CATEGORIES[team][0];
+ modal("New "+team+" ticket",field("Request summary","title")+
+ '<label>Department<select id="dxNewTeam" name="team" onchange="dxFillNewCats(this.value)">'+svcOpts(DX_DEPTS,team)+'</select></label>'+
+ '<label>Service type<select id="dxNewCategory" name="category">'+svcOpts(DX_CATEGORIES[team],category)+'</select></label>'+
+ '<label>Location<input name="location" required placeholder="Room 415 / Lobby"></label>'+
+ '<label>Guest / requestor (optional)<input name="guest" placeholder="Synthetic demo only"></label>'+
+ '<label>Priority<select name="priority">'+svcOpts(SVC_PRIORITIES,"Normal")+'</select></label>'+
+ '<label>Instructions<input name="description" required placeholder="Describe requested work"></label>',f=>{
+ const title=String(f.get("title")||"").trim(),location=String(f.get("location")||"").trim(),description=String(f.get("description")||"").trim();
+ if(!title||!location||!description)return flash("Complete the required fields");
+ const team=String(f.get("team")),cat=String(f.get("category"));if(!DX_CATEGORIES[team]?.includes(cat))return flash("Invalid department/category");
+ const id=Math.max(75000,...state.tickets.map(x=>Number(x.id)||0))+1;
+ const mt=location.match(/\b\d{3,4}\b/),room=mt?Number(mt[0]):null;
+ const t={id,title,team,category:cat,location,room,guest:String(f.get("guest")||""),priority:String(f.get("priority")),description,status:"Open",assignee:"Unassigned",createdAt:new Date().toISOString(),dueAt:new Date(Date.now()+30*60000).toISOString(),history:[],notes:[],links:[],attachments:[]};
+ state.tickets.unshift(t);dxEvent(t,"Created","Dispatch request entered");closeModal();svcSelected=id;page="Service Dispatch";render();
+ });
+}
+function dxFillNewCats(team){const e=document.getElementById("dxNewCategory");if(e)e.innerHTML=svcOpts(DX_CATEGORIES[team]||[],"")}
+function dxDetailAddon(t){
+ const assignees=state.dxEmployees.filter(x=>x.team===t.team);
+ const log=t.history.slice().reverse().map(x=>'<div class="dxlog"><strong>'+safe(x.event)+'</strong><small>'+safe(x.by)+' · '+svcTime(x.at)+'</small><div>'+safe(x.note||"")+'</div></div>').join("");
+ const choices='<label>Employee dispatch</label><select class="svcselect" aria-label="Assign employee" onchange="dxAssign('+t.id+',this.value)">'+svcOpts(["Unassigned",...assignees.map(x=>x.id)],t.employeeId||"Unassigned")+'</select><p class="hint">IDs correspond to the on-duty board; unavailable staff cannot be assigned.</p>';
+ const link=t.links.map(id=>'<button class="secondary" onclick="svcOpen('+id+')">#'+id+'</button>').join("");
+ const attachments=t.attachments.map(x=>'<div class="dxoption"><span>'+safe(x.name)+'</span><small>'+Math.round(x.bytes/1024)+' KB · metadata only</small></div>').join("");
+ return '<div class="dxsection">'+panel("Dispatch and acknowledgments",choices+'<div class="dxactions" style="margin-top:11px"><button onclick="dxAck('+t.id+')">Acknowledge assignment</button><button onclick="dxCreateLinkedPrompt('+t.id+')">+ Linked task</button></div>'+
+ '<p class="hint" style="margin-top:10px">Assignment: '+safe(t.assignee)+' · '+(t.acknowledgedAt?"Acknowledged "+svcTime(t.acknowledgedAt):"Not acknowledged")+'</p>'+
+ '<p class="hint">Escalation: '+(t.escalated?"Flagged overdue":"Not escalated")+' · Due '+svcTime(t.dueAt)+'</p>')+'</div>'+
+ '<div class="svcgrid dxsection">'+panel("Linked departmental requests",'<div class="dxactions">'+link+'</div>'+(link?"":'<p class="muted">No linked tasks.</p>'))+
+ panel("Supporting attachments",'<div class="alertbox">Public demo saves only file name and size, not file bytes. Do not upload real guest information or evidence.</div><input class="dxinput" type="file" id="dxFile" accept="image/*,.pdf" onchange="dxAttach('+t.id+',this)" style="margin-top:12px">'+attachments)+'</div>'+
+ '<div class="dxsection">'+panel("Complete ticket history",log)+'</div>';
+}
+function dxAttach(id,input){
+ if(!dxRequire("notes"))return;
+ const t=dxTicket(id),file=input?.files?.[0];if(!t||!file)return;
+ if(file.size>2*1024*1024){flash("Max attachment metadata size 2 MB");return}
+ const types=["image/png","image/jpeg","image/webp","application/pdf"];
+ if(!types.includes(file.type)){flash("Unsupported attachment type");return}
+ t.attachments.push({name:file.name.slice(0,80),bytes:file.size,type:file.type,at:new Date().toISOString()});
+ dxEvent(t,"Attachment metadata added","No file contents stored in public demo");render();
+}
+const dxOriginalService=services;
+services=function(){if(svcSelected!==null){const t=dxTicket(svcSelected);return dxOriginalService()+(t?dxDetailAddon(t):"")}return dxHome()};
+const dxOriginalAction=svcAction;
+svcAction=function(id,action){if(!dxRequire(action==="Void"?"void":"transition"))return;
+ if(action==="Start"){dxTransition(id,action,"Work started");return}
+ modal(action+" ticket #"+id,'<label>'+(action==="Complete"?"Resolution":action==="Stop"?"Reason for stopping":"Reason for void")+'<input name="note" required></label>',f=>{if(dxTransition(id,action,String(f.get("note")||"")))closeModal()});
+};
+const dxOriginalOpenTicket=openTicket;
+openTicket=function(){dxNewRequest("Engineering")};
+dxBootstrap();
 
 render();
 </script></body></html>
