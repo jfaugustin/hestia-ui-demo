@@ -26,6 +26,10 @@ const dirty=e("state.hkJobs.find(j=>j.stage==='Assigned'&&state.rooms.find(r=>r.
 assert.equal(e("hkUpdate("+dirty+",'Approve')"),false,"Cannot skip cleaning and inspection");
 assert.equal(e("hkUpdate("+dirty+",'Start')"),true);
 assert.equal(e("hkUpdate("+dirty+",'Submit')"),true);
+assert.equal(e("hkUpdate("+dirty+",'Approve')"),false,"Inspection is blocked until checklist completion");
+for(const check of ["Bathroom and fixtures","Linens and bedding","Amenities and supplies","Surfaces and floors","Maintenance / safety","Final presentation"])
+ assert.equal(e("hkCheck("+dirty+","+JSON.stringify(check)+",true)"),true,"Inspection criterion must be reviewable");
+
 assert.equal(e("hkUpdate("+dirty+",'Approve')"),true);
 assert.equal(e("hkRoom("+dirty+").status"),"ready","Supervisor inspection updates Front Office shared room inventory");
 assert.equal(e("hkJob("+dirty+").stage"),"Ready");
@@ -45,10 +49,23 @@ const housekeeper=e("hkStaff().find(x=>x.available).id");
 assert.equal(e("hkUpdate("+occupied+",'Assign',"+JSON.stringify(housekeeper)+")"),true);
 assert.equal(e("hkUpdate("+occupied+",'Start')"),true);
 assert.equal(e("hkUpdate("+occupied+",'Submit')"),true);
+for(const check of ["Bathroom and fixtures","Linens and bedding","Amenities and supplies","Surfaces and floors","Maintenance / safety","Final presentation"])
+ e("hkCheck("+occupied+","+JSON.stringify(check)+",true)");
+
 assert.equal(e("hkUpdate("+occupied+",'Approve')"),true);
 assert.equal(e("hkRoom("+occupied+").status"),"occupied","Cleaning an occupied stayover room preserves occupancy");
 const out=e("state.hkJobs.find(j=>state.rooms.find(r=>r.id===j.room).status==='out').room");
 assert.equal(e("hkUpdate("+out+",'Resume')"),false,"Out-of-order rooms cannot be marked ready by Housekeeping");
+const leaderRoom=e("state.hkJobs.find(j=>j.stage==='Assigned'&&j.assigneeId).room");
+const assignedStaff=e("hkJob("+leaderRoom+").assigneeId");
+e("hkSetRole('Attendant')");
+e("hkSetStaff("+JSON.stringify("hk-201")+")");
+assert.equal(e("hkUpdate("+leaderRoom+",'Approve')"),false,"Attendant cannot pass room inspection");
+e("hkSetStaff("+JSON.stringify("hk-202")+")");
+assert.ok(el.content.innerHTML.includes("My rooms"),"Attendant sees personal queue");
+e("hkSetRole('Supervisor')");
+e("hkAutoAllocate()");
+assert.ok(el.content.innerHTML.includes("Room board"),"Supervisor retains department view");
 e("hkSetTab('Team')");
 assert.ok(el.content.innerHTML.includes("Attendants and room allocations"));
 e("hkSetTab('Requests')");
