@@ -45,4 +45,21 @@ assert.equal(evaluate("state.reservations.find(r=>r.id==="+id+").status"),"Check
 evaluate("simulateRefund("+id+")");
 assert.ok(evaluate("folioBalance(state.reservations.find(r=>r.id==="+id+"))")>0,"Mock refund restores balance");
 assert.ok(!html.includes('name="cvv"')&&!html.includes('name="cardnumber"'),"No payment card input fields");
+
+const activeTicket=evaluate("state.tickets.find(t=>t.status==='Open').id");
+assert.equal(evaluate("svcChange("+activeTicket+",'Complete','Premature completion')"),false,"Cannot complete a ticket that has not been started");
+assert.equal(evaluate("svcChange("+activeTicket+",'Start','')"),true,"Open → Started");
+assert.equal(evaluate("svcChange("+activeTicket+",'Stop','')"),false,"Stop requires reason");
+assert.equal(evaluate("svcChange("+activeTicket+",'Stop','Awaiting replacement part')"),true,"Started → Stopped");
+assert.equal(evaluate("svcChange("+activeTicket+",'Start','')"),true,"Stopped → Started");
+assert.equal(evaluate("svcChange("+activeTicket+",'Complete','Work finished; room verified')"),true,"Started → Completed");
+assert.equal(evaluate("svcChange("+activeTicket+",'Void','Mistake')"),false,"Completed ticket cannot be voided");
+assert.equal(evaluate("state.tickets.find(t=>t.id==="+activeTicket+").history.length"),5,"Ticket audit retains initial record and four transitions");
+evaluate("svcOpen("+activeTicket+")");
+assert.ok(elements.content.innerHTML.includes("Ticket #"),"Individual ticket detail renders");
+const voidTicket=evaluate("state.tickets.find(t=>t.status==='Open'&&t.id!=="+activeTicket+").id");
+assert.equal(evaluate("svcChange("+voidTicket+",'Void','Duplicate service request')"),true,"Open → Voided with reason");
+assert.equal(evaluate("state.tickets.find(t=>t.id==="+voidTicket+").voidReason"),"Duplicate service request");
+assert.ok(evaluate("state.tickets.find(t=>t.id==="+activeTicket+").completedAt"),"Completion timestamp saved");
+
 console.log("PASS: Hestia demo syntax, 11 views, 5 stay tabs, checkout gate, mock authorizations/captures/refunds.");
