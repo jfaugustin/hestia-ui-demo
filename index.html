@@ -982,5 +982,28 @@ dcHome=function(){
  return s.replace('<div class="dc-toolbar">',role+'<div class="dc-toolbar">').replace('<div class="dc-stats">',controls+'<div class="dc-stats">');
 };
 
+
+/* Correct legacy synthetic booking dates once without rewriting custom bookings. */
+function migrateLegacyDemoDates(){
+ if(state.demoCalendarAligned)return;
+ const sample=state.reservations.find(r=>r.id===12000);
+ const legacy=sample&&sample.arrival==="2026-11-06";
+ const delta=legacy?Math.round((Date.parse(DEMO_DATE+"T12:00:00Z")-Date.parse("2026-11-12T12:00:00Z"))/86400000):0;
+ if(legacy&&delta){
+  for(const r of state.reservations.filter(r=>r.id>=12000&&r.id<12096)){
+   if(r.arrival)r.arrival=datePlus(r.arrival,delta);
+   if(r.departure)r.departure=datePlus(r.departure,delta);
+   for(const entry of r.folio||[])if(entry.at&&/^\d{4}-\d{2}-\d{2}$/.test(entry.at))entry.at=datePlus(entry.at,delta);
+   for(const event of r.audit||[])if(event.at&&/^\d{4}-\d{2}-\d{2}$/.test(event.at))event.at=datePlus(event.at,delta);
+  }
+ }
+ for(const r of state.reservations.filter(r=>[1001,1002,1003].includes(r.id))){
+  if(delta&&r.arrival?.startsWith("2026-11")){r.arrival=datePlus(r.arrival,delta);r.departure=datePlus(r.departure,delta)}
+ }
+ state.demoCalendarAligned=true;
+ save();
+}
+migrateLegacyDemoDates();
+
 render();
 </script></body></html>
