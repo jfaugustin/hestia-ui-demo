@@ -6,6 +6,8 @@ on:
       - 'index.html'
       - 'front-office.js'
       - 'front-office.css'
+      - 'app-shell.js'
+      - 'app-shell.css'
       - 'sw.js'
       - '.github/workflows/deploy.yml'
       - 'tests/**'
@@ -30,6 +32,7 @@ jobs:
         run: |
           node tests/demo-smoke.cjs
           node tests/front-office-smoke.cjs
+          node tests/app-shell-smoke.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
