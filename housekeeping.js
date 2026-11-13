@@ -273,6 +273,13 @@ function hkOccupancy(id){
  return "Vacant";
 }
 function hkCleanliness(job){return job.cleanliness||((job.stage==="Ready")?"Clean":(job.stage==="Awaiting inspection")?"Inspection":"Dirty")}
+function hkReadyForArrival(id){
+ const job=hkJob(id),room=hkRoom(id);
+ if(!room||room.status!=="ready")return false;
+ if(!job)return true;
+ const blocked=hkRestrictions(job);
+ return job.stage==="Ready"&&hkCleanliness(job)==="Clean"&&!blocked.out&&!blocked.active.length;
+}
 function hkRestrictions(job){
  const room=hkRoom(job.room);
  const active=(job.maintenanceBlocks||[]).filter(id=>{
@@ -333,7 +340,7 @@ function hkSuggestAssignee(job){
 function hkAutoAllocate(){
  if(!hkIsLeader())return false;
  let count=0;
- const list=state.hkJobs.filter(j=>j.stage==="Unassigned"&&!hkRestrictions(j).out&&!hkRestrictions(j).active.length)
+ const list=state.hkJobs.filter(j=>j.stage==="Unassigned"&&!j.guestPreference&&!hkRestrictions(j).out&&!hkRestrictions(j).active.length)
   .sort((a,b)=>hkPriority(a).tier-hkPriority(b).tier||a.room-b.room);
  for(const job of list){
   const employee=hkSuggestAssignee(job);
@@ -377,7 +384,7 @@ function hkSetPreference(id){
   const pref=String(f.get("preference")||"None"),note=String(f.get("reason")||"").trim();
   if(!note||!["None","Do Not Disturb","Refused service","Privacy requested"].includes(pref))return flash("Document the change");
   job.guestPreference=pref==="None"?"":pref;
-  if(pref!=="None"&&["Assigned","Unassigned"].includes(job.stage)){job.stage="On hold";job.holdReason=pref}
+  if(pref!=="None"&&["Assigned","Unassigned","In progress","Awaiting inspection"].includes(job.stage)){job.stage="On hold";job.cleanliness="Dirty";job.checklist={};job.holdReason=pref}
   if(pref==="None"&&job.stage==="On hold"&&["Do Not Disturb","Refused service","Privacy requested"].includes(job.holdReason||"")){job.stage=job.assigneeId?"Assigned":"Unassigned";job.holdReason=""}
   hkLog(job,"Guest preference updated",pref+" · "+note);
   closeModal();render();
