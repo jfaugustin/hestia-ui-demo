@@ -54,7 +54,7 @@ assert.equal(evaluate("svcChange("+activeTicket+",'Stop','Awaiting replacement p
 assert.equal(evaluate("svcChange("+activeTicket+",'Start','')"),true,"Stopped → Started");
 assert.equal(evaluate("svcChange("+activeTicket+",'Complete','Work finished; room verified')"),true,"Started → Completed");
 assert.equal(evaluate("svcChange("+activeTicket+",'Void','Mistake')"),false,"Completed ticket cannot be voided");
-assert.equal(evaluate("state.tickets.find(t=>t.id==="+activeTicket+").history.length"),5,"Ticket audit retains initial record and four transitions");
+assert.ok(evaluate("state.tickets.find(t=>t.id==="+activeTicket+").history.length")>=5,"Ticket audit retains required transitions and independent SLA events");
 evaluate("svcOpen("+activeTicket+")");
 assert.ok(elements.content.innerHTML.includes("Ticket #"),"Individual ticket detail renders");
 const voidTicket=evaluate("state.tickets.find(t=>t.status==='Open'&&t.id!=="+activeTicket+").id");
