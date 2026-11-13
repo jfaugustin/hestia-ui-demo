@@ -9,7 +9,7 @@ const safe=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"
 const pill=s=>'<span class="badge '+(s==="Ready"||s==="ready"||s==="Complete"||s==="Checked out"?"good":s==="Open"||s==="dirty"||s==="In progress"||s==="Reserved"?"warn":s==="Out of order"?"bad":"")+'">'+safe(s)+'</span>';
 const btn=(label,fn)=>'<button class="secondary" onclick="'+fn+'">'+safe(label)+'</button>';
 function toggleMenu(open){document.getElementById("sidebar").classList.toggle("open",open);document.getElementById("overlay").classList.toggle("on",open)}
-function nav(p){page=p;toggleMenu(false);render()}
+function nav(p){if(p==="Service Dispatch"&&typeof svcSelected!=="undefined")svcSelected=null;page=p;toggleMenu(false);render()}
 function flash(t){const n=document.createElement("div");n.className="toast";n.textContent=t;document.body.append(n);setTimeout(()=>n.remove(),2600)}
 function activity(t){state.activities.unshift(t);state.activities=state.activities.slice(0,15);save()}
 function header(title,desc,action=""){return '<div class="heading"><div><div class="eyebrow">HESTIA / '+safe(page)+'</div><h1>'+safe(title)+'</h1><p class="muted">'+safe(desc)+'</p></div>'+action+'</div>'}
@@ -184,7 +184,6 @@ function finances(){
  '<div class="section">'+panel("Payment controls and boundaries",'<div class="alertbox">Card numbers, CVV and payment credentials must never be entered into this public demo. Mock authorization and capture actions do not contact banks. Real systems require tokenization, restricted permissions, reconciled settlement, PCI DSS controls and processor webhooks.</div>')+'</div>'+
  '<div class="section">'+panel("Recent mock transactions",events.length?events.map(x=>row(x.type+" · "+fmtMoney(x.amount),x.guest+" · "+x.id,x.status)).join(""):'<p class="muted">No mock card activity recorded. Open a reservation to test an authorization and a simulated payment.</p>')+'</div>';
 };
-const originalResetDemo=resetDemo;
 function resetDemo(){if(!confirm("Reset all synthetic demo data?"))return;state=seed();enrichDemo();render();flash("Demo reset")};
 
 NAV.splice(2,0,["Guests","♧"]);
@@ -193,7 +192,6 @@ enrichDemo();
 /* Hestia service ticket lifecycle: prototype-only; persistent in browser localStorage */
 const SVC_STATUS=["Open","Started","Stopped","Completed","Voided"];
 const SVC_PRIORITIES=["Critical","High","Normal","Low"];
-const SVC_TEAMS=["Engineering","Housekeeping","Guest Services","Security","Front Office","IT","Food & Beverage","Management"];
 let svcSelected=null;
 const svcTime=v=>v?new Date(v).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"—";
 function svcSeed(){
@@ -361,12 +359,17 @@ function dxTicket(id){return state.tickets.find(t=>Number(t.id)===Number(id))}
 function dxEvent(t,label,note=""){t.history.push({event:label,note,by:"Demo "+dxRole,at:new Date().toISOString()});activity("#"+t.id+" "+label);save()}
 function dxAssign(id,employeeId){
  if(!dxRequire("assign"))return false;
- const t=dxTicket(id),worker=state.dxEmployees.find(x=>x.id===employeeId);
+ const t=dxTicket(id);
  if(!t||["Completed","Voided"].includes(t.status))return false;
- if(worker&&!worker.available){flash("Employee is not marked available");return false}
- if(worker&&worker.team!==t.team){flash("Assignee department does not match ticket department");return false}
- t.assignee=worker?worker.name:"Unassigned";t.employeeId=worker?.id||null;t.acknowledgedAt=null;
- dxEvent(t,"Assigned",t.assignee+" · awaiting acknowledgment");render();return true;
+ const selected=employeeId==="Unassigned"?"":String(employeeId||"");
+ const worker=state.dxEmployees.find(e=>e.id===selected);
+ if(selected&&!worker){flash("Employee not found");return false}
+ if(worker&&worker.team!==t.team){flash("Employee must belong to "+t.team);return false}
+ if(worker&&!worker.available){flash("Selected employee is unavailable");return false}
+ if((t.employeeId||"")===selected)return true;
+ t.employeeId=worker?.id||null;t.assignee=worker?.name||"Unassigned";t.acknowledgedAt=null;
+ dxEvent(t,"Assigned",worker?worker.name+" · awaiting acknowledgment":"Returned to department queue");
+ render();return true;
 }
 function dxAck(id){
  if(!dxRequire("ack"))return false;
@@ -489,8 +492,6 @@ function svcAction(id,action){if(!dxRequire(action==="Void"?"void":"transition")
  modal(action+" ticket #"+id,'<label>'+(action==="Complete"?"Resolution":action==="Stop"?"Reason for stopping":"Reason for void")+'<input name="note" required></label>',f=>{if(dxTransition(id,action,String(f.get("note")||"")))closeModal()});
 };
 function openTicket(){dxNewRequest("Engineering")}
-const dxNavBefore=nav;
-nav=function(name){if(name==="Service Dispatch")svcSelected=null;dxNavBefore(name)};
 dxBootstrap();
 
 
@@ -599,19 +600,6 @@ function svcAssign(id,value){
  if(value==="Unassigned"||value===""){dxAssign(id,"");return}
  if(employee){dxAssign(id,employee.id);return}
  flash("Choose an employee through the assignment control");
-};
-const dcOldAssign=dxAssign;
-dxAssign=function(id,employeeId){
- if(!dxRequire("assign"))return false;
- const t=dxTicket(id);
- if(!t||["Completed","Voided"].includes(t.status))return false;
- if(employeeId==="Unassigned")employeeId="";
- const worker=state.dxEmployees.find(x=>x.id===employeeId);
- if(employeeId&&!worker){flash("Employee not found");return false}
- if(worker&&worker.team!==t.team){flash("Employee must belong to "+t.team);return false}
- if(worker&&!worker.available){flash("Selected employee is unavailable");return false}
- if((t.employeeId||"")===(employeeId||""))return true;
- return dcOldAssign(id,employeeId);
 };
 function dcFilterSet(value){dcStatus=value;render()}
 function dcMainTab(value){dxTab=value;svcSelected=null;render()}
