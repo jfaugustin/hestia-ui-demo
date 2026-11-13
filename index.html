@@ -64,7 +64,7 @@
 .dc-hint{color:#788b99;font-size:11px;line-height:1.55}
 @media(max-width:780px){.dc-details{grid-template-columns:1fr}.dc-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-ticket{grid-template-columns:1fr}.dc-ticket-actions{justify-content:flex-start}.dc-toolbar{align-items:stretch}.dc-toolbar .dc-tabs{width:100%}.dc-filters input{min-width:100%}}
 
-</style><link rel="stylesheet" href="./front-office.css?v=4"></head><body>
+</style><link rel="stylesheet" href="./front-office.css?v=4"><link rel="stylesheet" href="./app-shell.css?v=1"></head><body>
 <div class="mobileoverlay" id="overlay" onclick="toggleMenu(false)"></div><div class="shell"><aside class="sidebar" id="sidebar"><div class="brand">HESTIA</div><div class="tagline">HOTEL OPERATING SYSTEM</div><nav class="nav" id="nav"></nav><div class="sidefoot">DEMONSTRATION ENVIRONMENT<br>Synthetic data only · Stored in this browser<br><button class="secondary" style="margin-top:9px" onclick="resetDemo()">Reset demo</button></div></aside>
 <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="menu" onclick="toggleMenu(true)">☰</button><div><div class="prop">Grand Hotel <span style="font-weight:400;color:#8494a1">/ Demo Property</span></div><div class="tiny">Independent luxury hotel · 120 rooms</div></div></div><div class="topright"><span class="desktop subtle">Business date · November 12, 2026</span><span>◉</span><div class="avatar">HM</div></div></header><div class="content" id="content"></div></main></div><div id="modalroot"></div>
 <script>
@@ -1010,4 +1010,4 @@ function migrateLegacyDemoDates(){
 migrateLegacyDemoDates();
 
 render();
-</script><script src="./front-office.js?v=4"></script></body></html>
+</script><script src="./front-office.js?v=4"></script><script src="./app-shell.js?v=1"></script></body></html>
