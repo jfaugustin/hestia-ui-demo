@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'sw.js'
       - '.github/workflows/deploy.yml'
       - 'tests/**'
   workflow_dispatch:
