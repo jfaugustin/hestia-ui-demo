@@ -16,14 +16,14 @@ function header(title,desc,action=""){return '<div class="heading"><div><div cla
 function panel(title,body){return '<section class="panel"><div class="paneltitle">'+title+'</div>'+body+'</section>'}
 function row(title,desc,status){return '<div class="line"><div><strong>'+safe(title)+'</strong><div class="tiny">'+safe(desc)+'</div></div>'+pill(status)+'</div>'}
 function kp(name,val,note){return '<div class="kpi"><div class="label">'+name+'</div><div class="value">'+val+'</div><div class="note">'+note+'</div></div>'}
-function overview(){let occ=state.rooms.filter(r=>r.status==="occupied").length;const vals=[61,73,68,82,76,87,79];return header("Property Overview","A unified view of your hotel's operations.",'<button class="primary" onclick="openReservation()">+ New reservation</button>')+'<div class="grid">'+kp("Occupancy","87.3%","Illustrative property-wide metric")+kp("Arrivals Today",state.reservations.filter(r=>r.arrival==="2026-11-12").length,"Upcoming check-ins")+kp("Open Service Tickets",state.tickets.filter(t=>t.status!=="Complete").length,"Across all departments")+kp("Revenue Today","$48,260","Illustrative room revenue")+'</div><div class="columns">'+panel("Occupancy trend — Last 7 days",'<div class="chart">'+vals.map(v=>'<div class="bar" style="height:'+v+'%"><span>'+v+'%</span></div>').join("")+'</div><div class="chartlabels">'+["Fri","Sat","Sun","Mon","Tue","Wed","Thu"].map(x=>'<span>'+x+'</span>').join("")+'</div>')+panel("Operational alerts",row("Rooms requiring attention",state.rooms.filter(r=>r.status==="dirty").length+" rooms awaiting turnover","Open")+row("Engineering follow-ups","Outstanding maintenance tasks","In progress")+row("Expected arrivals","Front office preparation","Reserved"))+'</div><div class="columns">'+panel("Arrivals & reservations",state.reservations.slice(0,5).map(r=>row(r.guest,"Room "+r.room+" · "+r.arrival,r.status)).join(""))+panel("Recent activity",state.activities.slice(0,6).map(x=>'<div class="line"><div>'+safe(x)+'</div></div>').join(""))+'</div>'}
-function reservations(){return header("Reservations","Manage the guest stay lifecycle.",'<button class="primary" onclick="openReservation()">+ New reservation</button>')+panel("Reservation register",'<div class="tablewrap"><table><thead><tr><th>Confirmation</th><th>Guest</th><th>Room</th><th>Arrival</th><th>Departure</th><th>Status</th><th>Action</th></tr></thead><tbody>'+state.reservations.map(r=>'<tr><td><strong>#'+r.id+'</strong></td><td>'+safe(r.guest)+'</td><td>'+r.room+'</td><td>'+r.arrival+'</td><td>'+r.departure+'</td><td>'+pill(r.status)+'</td><td>'+ (r.status==="Reserved"?btn("Cancel","changeReservation("+r.id+",'Cancelled')"):"")+'</td></tr>').join("")+'</tbody></table></div>')}
-function desk(){return header("Front Desk","Coordinate arrivals, departures, and in-house guests.")+panel("Guest queue",'<div class="tablewrap"><table><thead><tr><th>Guest</th><th>Room</th><th>Dates</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+state.reservations.filter(r=>r.status!=="Cancelled").map(r=>'<tr><td><strong>'+safe(r.guest)+'</strong></td><td>'+r.room+'</td><td>'+r.arrival+' → '+r.departure+'</td><td>'+pill(r.status)+'</td><td>'+(r.status==="Reserved"?btn("Check in","changeReservation("+r.id+",'Checked in')"):r.status==="Checked in"?btn("Check out","changeReservation("+r.id+",'Checked out')"):"")+'</td></tr>').join("")+'</tbody></table></div>')}
+
+
+
 function roomview(){return header("Rooms","Room inventory and readiness. Select a room to update its status.")+panel("Room status — Sample floor inventory",'<div class="roomgrid">'+state.rooms.map(r=>'<button class="room '+(r.status==="occupied"?"occupied":r.status==="dirty"?"dirty":r.status==="out"?"out":"")+'" onclick="cycleRoom('+r.id+')">'+r.id+'<small>'+safe(r.status)+'</small></button>').join("")+'</div><p class="tiny" style="margin-top:17px">Demonstration only. Rooms rotate through ready, occupied, dirty, and out of order.</p>')}
 function housekeeping(){return header("Housekeeping","Inspect and turn over rooms for the next arrival.")+panel("Rooms awaiting turnover",state.rooms.filter(r=>r.status==="dirty").map(r=>'<div class="line"><div><strong>Room '+r.id+'</strong><div class="tiny">Dirty · Inspection pending</div></div><button class="secondary" onclick="markReady('+r.id+')">Mark ready</button></div>').join("")||'<div class="empty">All demo rooms are ready.</div>')+ '<div class="section">'+panel("Housekeeping progress",row("Rooms ready",state.rooms.filter(r=>r.status==="ready").length+" in sample inventory","Complete")+row("Rooms occupied",state.rooms.filter(r=>r.status==="occupied").length+" in sample inventory","In progress"))+'</div>'}
-function services(){return header("Service Dispatch","Centralize hotel service and maintenance requests.",'<button class="primary" onclick="openTicket()">+ New request</button>')+panel("Active service board",state.tickets.map(t=>'<div class="line"><div><strong>'+safe(t.title)+'</strong><div class="tiny">#'+t.id+' · Room '+t.room+' · '+safe(t.team)+'</div></div><div class="actions">'+pill(t.status)+(t.status!=="Complete"?btn(t.status==="Open"?"Start":"Complete","advanceTicket("+t.id+")"):"")+'</div></div>').join(""))}
+
 function security(){return header("Security","Record and track hotel safety incidents.",'<button class="primary" onclick="openIncident()">+ New incident</button>')+panel("Incident log",state.incidents.map(i=>'<div class="line"><div><strong>'+safe(i.title)+'</strong><div class="tiny">Incident #'+i.id+' · '+safe(i.location)+'</div></div><div class="actions">'+pill(i.status)+(i.status!=="Complete"?btn("Resolve","resolveIncident("+i.id+")"):"")+'</div></div>').join(""))}
-function finances(){return header("Financials","Illustrative property revenue—not connected to a payment processor.")+'<div class="grid">'+kp("Room Revenue","$48,260","Today · synthetic")+kp("Average Daily Rate","$462","Illustrative")+kp("RevPAR","$403","Illustrative")+kp("Pending Folios","12","Demonstration")+'</div><div class="section">'+panel("Revenue overview",row("Rooms","$39,840","Complete")+row("Food & beverage","$6,510","Complete")+row("Other","$1,910","Complete"))+'</div>'}
+
 function intelligence(){return header("Intelligence","Operational reporting and insight.")+'<div class="grid">'+kp("Occupancy","87.3%","Illustrative")+kp("Service Completion","92%","Illustrative")+kp("Guest Satisfaction","4.7/5","Illustrative")+kp("Room Readiness","96%","Illustrative")+'</div><div class="section">'+panel("Export demo data",'<p class="muted" style="margin-bottom:17px">Download the current synthetic reservation, service, security and room records.</p><button class="primary" onclick="exportDemo()">Export JSON</button>')+'</div>'}
 function workforce(){return header("Workforce","Departmental staffing and service coverage.")+panel("Department overview",row("Front Office","6 scheduled · AM/PM coverage","Complete")+row("Housekeeping","11 scheduled · Morning turnover","Complete")+row("Engineering","3 scheduled · On-call rotation","Complete")+row("Security","4 scheduled · 24-hour coverage","Complete"))}
 function render(){document.getElementById("nav").innerHTML=NAV.map(([n,g])=>'<button class="'+(page===n?"active":"")+'" data-page="'+n+'"><span class="glyph">'+g+'</span>'+n+'</button>').join("");document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>nav(b.dataset.page));let views={"Overview":overview,"Reservations":reservations,"Front Desk":desk,"Rooms":roomview,"Housekeeping":housekeeping,"Service Dispatch":services,"Security":security,"Financials":finances,"Intelligence":intelligence,"Workforce":workforce};document.getElementById("content").innerHTML=views[page]()+ '<div class="footer">HESTIA · Interactive demonstration only · Synthetic data · No live hotel services</div>'}
@@ -34,11 +34,11 @@ function openReservation(){modal("New reservation",field("Guest name","guest")+f
 function changeReservation(id,status){let r=state.reservations.find(x=>x.id===id);if(!r)return;if(status==="Checked in"){let room=state.rooms.find(x=>x.id===r.room);if(room.status==="dirty"||room.status==="out")return flash("Room not ready for check-in");room.status="occupied"}if(status==="Checked out"){let room=state.rooms.find(x=>x.id===r.room);room.status="dirty"}r.status=status;activity("Reservation #"+id+" · "+status);render();flash("Reservation updated")}
 function cycleRoom(id){let r=state.rooms.find(x=>x.id===id);r.status=({ready:"occupied",occupied:"dirty",dirty:"out",out:"ready"})[r.status];activity("Room "+id+" status updated");render()}
 function markReady(id){state.rooms.find(x=>x.id===id).status="ready";activity("Housekeeping completed · Room "+id);render();flash("Room ready")}
-function openTicket(){modal("New service request",field("Request summary","title")+field("Room number","room","number",'min="201" max="530"')+'<label>Department<select name="team"><option>Engineering</option><option>Housekeeping</option><option>Guest Services</option><option>Security</option></select></label>',f=>{state.tickets.unshift({id:Date.now(),title:String(f.get("title")).trim(),room:Number(f.get("room")),team:String(f.get("team")),status:"Open"});activity("New service ticket created");closeModal();render();flash("Ticket created")})}
+
 function advanceTicket(id){let t=state.tickets.find(x=>x.id===id);t.status=t.status==="Open"?"In progress":"Complete";activity("Service request #"+id+" · "+t.status);render()}
 function openIncident(){modal("New security incident",field("Incident summary","title")+field("Location","location"),f=>{state.incidents.unshift({id:Date.now(),title:String(f.get("title")).trim(),location:String(f.get("location")).trim(),status:"Open"});activity("Security incident recorded");closeModal();render();flash("Incident recorded")})}
 function resolveIncident(id){state.incidents.find(x=>x.id===id).status="Complete";activity("Incident resolved · #"+id);render()}
-function resetDemo(){if(!confirm("Reset all synthetic demo data?"))return;state=seed();save();render();flash("Demo reset")}
+
 function exportDemo(){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="hestia-demo-data.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
 /* v1.2 viability preview: entirely synthetic and non-payment-processing */
@@ -97,14 +97,14 @@ function guestListing(){
  const rows=state.reservations.filter(r=>r.guest.toLowerCase().includes(reservationSearch.toLowerCase()));
  return header("Guest Directory","Browse synthetic profiles and reservation history.")+panel("Guest profiles",'<div class="resultbar"><input aria-label="Search guests" placeholder="Search guests" id="guestSearch" value="'+safe(reservationSearch)+'"><span class="muted">'+rows.length+' profiles</span></div><div class="tablewrap"><table><thead><tr><th>Guest</th><th>Classification</th><th>Reservation</th><th>Status</th></tr></thead><tbody>'+rows.map(r=>'<tr><td><button class="clickable" onclick="openDetail('+r.id+',\'Guest\')">'+safe(r.guest)+'</button></td><td>'+safe(r.profile.vip)+'</td><td>'+safe(r.confirmation)+'</td><td>'+pill(r.status)+'</td></tr>').join("")+'</tbody></table></div>');
 }
-reservations=function(){
+function reservations(){
  const rows=state.reservations.filter(r=>(r.guest+" "+r.confirmation+" "+r.room).toLowerCase().includes(reservationSearch.toLowerCase()));
  const active=state.reservations.filter(r=>["Reserved","Checked in"].includes(r.status)).length;
  return header("Reservations","Browse the full booking register, guest details, and folios.",'<button class="primary" onclick="openReservation()">+ New reservation</button>')+
  '<div class="statstrip"><div><strong>'+state.reservations.length+'</strong><span>Total bookings</span></div><div><strong>'+active+'</strong><span>Active / upcoming</span></div><div><strong>'+state.reservations.filter(r=>r.status==="Checked in").length+'</strong><span>In house</span></div></div>'+
  panel("Reservations",'<div class="resultbar"><input id="reservationSearch" aria-label="Search reservations" placeholder="Search guest, confirmation, room" value="'+safe(reservationSearch)+'"><span class="muted">'+rows.length+' matches</span></div><div class="tablewrap"><table><thead><tr><th>Confirmation</th><th>Guest</th><th>Room</th><th>Arrival</th><th>Departure</th><th>Status</th><th>Folio</th></tr></thead><tbody>'+rows.map(r=>'<tr><td><button class="clickable" onclick="openDetail('+r.id+')">'+safe(r.confirmation)+'</button></td><td>'+safe(r.guest)+'</td><td>'+r.room+'</td><td>'+r.arrival+'</td><td>'+r.departure+'</td><td>'+pill(r.status)+'</td><td class="money">'+fmtMoney(folioBalance(r))+'</td></tr>').join("")+'</tbody></table></div>');
 }
-desk=function(){
+function desk(){
  const rows=state.reservations.filter(r=>["Reserved","Checked in"].includes(r.status));
  return header("Front Desk","Reservations and departures with folio settlement checks.")+panel("Front desk queue",'<div class="tablewrap"><table><thead><tr><th>Guest</th><th>Room</th><th>Status</th><th>Balance</th><th>Action</th></tr></thead><tbody>'+rows.map(r=>'<tr><td><button class="clickable" onclick="openDetail('+r.id+')">'+safe(r.guest)+'</button></td><td>'+r.room+'</td><td>'+pill(r.status)+'</td><td>'+fmtMoney(folioBalance(r))+'</td><td>'+btn("Open stay","openDetail("+r.id+")")+'</td></tr>').join("")+'</tbody></table></div>');
 }
@@ -135,7 +135,7 @@ function simulateCapture(id){const r=state.reservations.find(x=>x.id===id),due=M
 function simulateRefund(id){const r=state.reservations.find(x=>x.id===id),paid=settledTotal(r);if(paid<=0)return flash("No simulated payments to refund");if(!confirm("Simulate refund of "+fmtMoney(paid)+"? No actual funds will move."))return;r.folio.push({id:"demo-refund-"+Date.now(),type:"Refund",description:"Simulated refund · no funds moved",amount:paid,at:DEMO_DATE});paymentEvent(r,"Refund",paid,"Simulation only");save();render();flash("Mock refund recorded")}
 
 /* Calculated portfolio dashboard and simulated folio financial summaries */
-overview=function(){
+function overview(){
  const active=state.reservations.filter(r=>r.status==="Checked in");
  const occupancy=Math.round((active.length/state.rooms.length)*1000)/10;
  const arrivals=state.reservations.filter(r=>r.arrival===DEMO_DATE&&r.status!=="Cancelled").length;
@@ -152,7 +152,7 @@ overview=function(){
  '<div class="columns">'+panel("Recent reservations",state.reservations.slice(0,6).map(r=>'<div class="line"><div><button class="clickable" onclick="openDetail('+r.id+')">'+safe(r.guest)+'</button><div class="tiny">'+safe(r.confirmation)+' · Room '+r.room+'</div></div>'+pill(r.status)+'</div>').join(""))+
  panel("Activity feed",state.activities.slice(0,8).map(x=>'<div class="line"><span>'+safe(x)+'</span></div>').join(""))+'</div>';
 };
-finances=function(){
+function finances(){
  const charges=state.reservations.reduce((sum,r)=>sum+chargesTotal(r),0);
  const captured=state.reservations.reduce((sum,r)=>sum+settledTotal(r),0);
  const balance=state.reservations.reduce((sum,r)=>sum+folioBalance(r),0);
@@ -163,7 +163,7 @@ finances=function(){
  '<div class="section">'+panel("Recent mock transactions",events.length?events.map(x=>row(x.type+" · "+fmtMoney(x.amount),x.guest+" · "+x.id,x.status)).join(""):'<p class="muted">No mock card activity recorded. Open a reservation to test an authorization and a simulated payment.</p>')+'</div>';
 };
 const originalResetDemo=resetDemo;
-resetDemo=function(){if(!confirm("Reset all synthetic demo data?"))return;state=seed();enrichDemo();render();flash("Demo reset")};
+function resetDemo(){if(!confirm("Reset all synthetic demo data?"))return;state=seed();enrichDemo();render();flash("Demo reset")};
 
 const renderOriginal=render;
 render=function(){
@@ -229,13 +229,7 @@ function svcChange(id,action,note){
  render();flash("Ticket #"+id+" "+t.status.toLowerCase());
  return true;
 }
-function svcAction(id,action){
- if(action==="Start"){svcChange(id,action,"Work started");return;}
- modal(action+" ticket #"+id,
- '<label>'+(action==="Complete"?"Resolution / work performed":action==="Stop"?"Reason for stopping":"Reason for voiding")+
- '<input name="note" required placeholder="Document the action"></label>',
- f=>{if(svcChange(id,action,String(f.get("note")||"")))closeModal()});
-}
+
 function svcAddNote(id){
  const t=state.tickets.find(x=>x.id===Number(id));
  const el=document.getElementById("svcNote");
@@ -245,13 +239,7 @@ function svcAddNote(id){
  svcRecord(t,"Note added","Internal note recorded");
  render();flash("Note added");
 }
-function svcAssign(id,value){
- const t=state.tickets.find(x=>x.id===Number(id));
- if(!t||["Completed","Voided"].includes(t.status))return flash("Closed tickets cannot be edited");
- if(!String(value).trim())return flash("Choose an assignee");
- const before=t.assignee;t.assignee=value;
- svcRecord(t,"Assignment changed",before+" → "+value);render();
-}
+
 function svcPriority(id,value){
  const t=state.tickets.find(x=>x.id===Number(id));
  if(!t||!SVC_PRIORITIES.includes(value)||["Completed","Voided"].includes(t.status))return;
@@ -260,29 +248,11 @@ function svcPriority(id,value){
 }
 function svcOpts(items,selected){return items.map(x=>'<option value="'+safe(x)+'"'+(x===selected?" selected":"")+'>'+safe(x)+'</option>').join("")}
 function svcTag(t){return '<span class="badge '+(t.status==="Completed"?"good":t.status==="Voided"?"bad":t.status==="Stopped"?"warn":"")+'">'+safe(t.status)+'</span>'}
-function svcButtons(t){
- let actions=[];
- if(["Open","Stopped"].includes(t.status))actions.push("Start");
- if(t.status==="Started")actions.push("Stop","Complete");
- if(["Open","Started","Stopped"].includes(t.status))actions.push("Void");
- return '<div class="actions">'+actions.map(a=>'<button class="secondary" onclick="svcAction('+t.id+',\''+a+'\')">'+a+'</button>').join("")+'</div>';
-}
+
 function svcOpen(id){svcSelected=Number(id);page="Service Dispatch";render();window.scrollTo?.(0,0)}
 function svcBack(){svcSelected=null;render()}
-function svcTicketDetail(){
- const t=state.tickets.find(x=>x.id===svcSelected);
- if(!t){svcSelected=null;return panel("Ticket not found","No matching service record")}
- const data=(k,v)=>'<div class="svcdetailrow"><span>'+safe(k)+'</span><strong>'+safe(v)+'</strong></div>';
- const selectAssignee=["Unassigned","Engineering team","Housekeeping team","Guest Services team","Security team","Front Office team","IT team","F&B team","Management team"];
- if(!selectAssignee.includes(t.assignee))selectAssignee.push(t.assignee);
- const controls=panel("Ticket controls",'<label class="ticket-field-label">Assigned to</label><select class="svcselect" aria-label="Ticket assignee" onchange="svcAssign('+t.id+',this.value)">'+svcOpts(selectAssignee,t.assignee)+'</select><label class="ticket-field-label" style="display:block;margin:14px 0 5px">Priority</label><select class="svcselect" aria-label="Ticket priority" onchange="svcPriority('+t.id+',this.value)">'+svcOpts(SVC_PRIORITIES,t.priority)+'</select><div style="margin-top:17px">'+svcButtons(t)+'</div><p class="hint" style="margin-top:13px">Start begins work. Stop pauses it. Complete requires a resolution. Void requires a reason. Every action remains in the ticket history.</p>');
- return '<div class="actions" style="margin-bottom:14px"><button class="secondary" onclick="svcBack()">← All tickets</button>'+svcTag(t)+'</div>'+
- header("Ticket #"+t.id,t.title+" · "+t.location)+
- '<div class="svcgrid">'+panel("Work order details",data("Department",t.team)+data("Category",t.category)+data("Location",t.location)+data("Room",t.room||"—")+data("Status",t.status)+data("Priority",t.priority)+data("Assigned to",t.assignee)+data("Created",svcTime(t.createdAt))+data("Started",svcTime(t.startedAt))+data("Stopped",svcTime(t.stoppedAt))+data("Completed",svcTime(t.completedAt))+data("Voided",svcTime(t.voidedAt))+'<p class="muted" style="padding-top:15px;line-height:1.6">'+safe(t.description)+'</p>'+(t.resolution?'<div class="alertbox" style="margin-top:12px">Resolution: '+safe(t.resolution)+'</div>':"")+(t.voidReason?'<div class="alertbox" style="margin-top:12px">Void reason: '+safe(t.voidReason)+'</div>':""))+controls+'</div>'+
- '<div class="svcgrid" style="margin-top:15px">'+panel("Internal notes",'<textarea class="svcnote" id="svcNote" placeholder="Add a handoff, progress note, or guest communication..."></textarea><div style="margin:11px 0"><button class="primary" onclick="svcAddNote('+t.id+')">Add note</button></div>'+t.notes.slice().reverse().map(n=>'<div class="svclog"><strong>'+safe(n.by)+'</strong><small>'+svcTime(n.at)+'</small><p>'+safe(n.text)+'</p></div>').join(""))+
- panel("Ticket audit history",t.history.slice().reverse().map(h=>'<div class="svclog"><strong>'+safe(h.event)+'</strong><small>'+svcTime(h.at)+' · '+safe(h.by)+'</small><p>'+safe(h.note)+'</p></div>').join(""))+'</div>';
-}
-services=function(){
+
+function services(){
  if(svcSelected!==null)return svcTicketDetail();
  const active=state.tickets.filter(t=>!["Completed","Voided"].includes(t.status));
  const filtered=state.tickets.filter(t=>(svcFilter==="All"||svcFilter==="Active"&&!["Completed","Voided"].includes(t.status)||svcFilter===t.status)&&
@@ -297,7 +267,7 @@ services=function(){
  '<div class="muted" style="font-size:11px;margin-bottom:10px">'+filtered.length+' matching tickets</div>'+
  (filtered.length?filtered.map(t=>'<div class="svcrow"><div class="svcmain"><button class="svctitle" onclick="svcOpen('+t.id+')">#'+t.id+' · '+safe(t.title)+'</button><div class="svcmeta">'+safe(t.location)+' · '+safe(t.team)+' · '+safe(t.assignee)+' · '+svcTime(t.createdAt)+'</div></div><div class="svcright">'+svcTag(t)+'<span class="svcpriority '+safe(t.priority)+'">'+safe(t.priority)+'</span><button class="secondary" onclick="svcOpen('+t.id+')">Details</button></div></div>').join(""):'<div class="empty">No matching tickets.</div>'));
 };
-openTicket=function(){
+function openTicket(){
  modal("New service ticket",field("Request summary","title")+
  '<label>Location<input name="location" required placeholder="Room 814, Lobby, B1..."></label>'+
  '<label>Department<select name="team">'+svcOpts(SVC_TEAMS,"Engineering")+'</select></label>'+
@@ -348,13 +318,7 @@ function foInit(){
  });
  save();
 }
-function foTicketActions(t){
- const tags=[];
- if(["Open","Stopped"].includes(t.status))tags.push("Start");
- if(t.status==="Started")tags.push("Stop","Complete");
- if(["Open","Started","Stopped"].includes(t.status))tags.push("Void");
- return tags.map(a=>'<button class="secondary" onclick="svcAction('+t.id+',\''+a+'\')">'+a+'</button>').join("");
-}
+
 function foDue(t){
  if(["Completed","Voided"].includes(t.status))return "Closed";
  const m=Math.round((Date.parse(t.dueAt)-Date.now())/60000);
@@ -548,12 +512,7 @@ function dxSetRole(value){if(!DX_ROLES[value])return;dxRole=value;render()}
 function dxSetTab(value){dxTab=value;render()}
 function dxSetDept(value){dxDepartment=value;render()}
 function dxToggleEmployee(id){if(!dxRequire("assign"))return;const e=state.dxEmployees.find(x=>x.id===id);if(!e)return;e.available=!e.available;save();render()}
-function dxAssignments(){
- const rows=state.dxEmployees.filter(e=>dxStaff==="All"||e.team===dxStaff);
- return panel("On-duty employee dispatch",'<div class="svcbar"><select aria-label="Filter employees" onchange="dxStaff=this.value;render()">'+svcOpts(["All",...new Set(state.dxEmployees.map(e=>e.team))],dxStaff)+'</select></div><div class="dxgrid">'+rows.map(e=>{
- const active=state.tickets.filter(t=>t.employeeId===e.id&&!["Voided","Completed"].includes(t.status));
- return '<div class="dxcard"><div class="dxhead"><h3>'+safe(e.name)+'</h3>'+pill(e.available?"Available":"Unavailable")+'</div><p>'+safe(e.team)+' · '+safe(e.shift)+' shift</p><p>'+active.length+' assigned tickets · '+active.filter(t=>!t.acknowledgedAt).length+' awaiting acknowledgment</p><button class="secondary" onclick="dxToggleEmployee(\''+e.id+'\')">Change availability</button></div>'}).join("")+'</div>');
-}
+
 function dxSchedule(){
  const rules=state.dxRecurring;
  return panel("Recurring operational tasks",'<p class="muted" style="margin-bottom:12px">Sample schedules generate tickets on demand in this public preview. A production scheduler would generate them automatically on the server.</p>'+rules.map(x=>'<div class="dxoption"><div><strong>'+safe(x.title)+'</strong><div class="dxsmall">'+safe(x.team)+' · every '+x.interval+' day(s) · last '+safe(x.last)+'</div></div><div class="dxactions"><button onclick="dxRecurringRun('+x.id+',\''+new Date().toISOString().slice(0,10)+'\')">Generate if due</button></div></div>').join("")+'<div class="dxsection"><button class="primary" onclick="dxScheduleNew()">+ New recurring task</button></div>');
@@ -586,12 +545,7 @@ function dxBoard(){
  }).join("");
  return stats+panel("Live operations queue",filters+'<div class="dxsmall" style="margin-bottom:9px">'+filtered.length+' matching active tickets · local demo, not multi-user live</div>'+(rows||'<div class="empty">No tickets match</div>'));
 }
-function dxHome(){
- return header("Dispatch Command","Unified departmental service management · synthetic demonstration")+
- '<div class="svcbar"><select aria-label="Preview role" id="dxRole" onchange="dxSetRole(this.value)">'+svcOpts(Object.keys(DX_ROLES),dxRole)+'</select><span class="hint">Role preview only · security must be enforced by a server</span></div>'+
- '<div class="dxchips">'+["Queue","Employees","Schedules","Analytics","Departments"].map(x=>'<button class="'+(dxTab===x?"selected":"")+'" onclick="dxSetTab(\''+x+'\')">'+x+'</button>').join("")+'</div>'+
- (dxTab==="Queue"?dxBoard():dxTab==="Employees"?dxAssignments():dxTab==="Schedules"?dxSchedule():dxTab==="Analytics"?dxAnalytics():panel("Departmental service types",'<div class="dxgrid">'+DX_DEPTS.map(team=>'<div class="dxcard"><h3>'+safe(team)+'</h3><p>'+safe((DX_CATEGORIES[team]||[]).join(" · "))+'</p><button class="secondary" onclick="dxNewRequest(\''+team+'\')">New request</button></div>').join("")+'</div>'));
-}
+
 function dxNewRequest(team){
  if(!dxRequire("create"))return;
  team=DX_CATEGORIES[team]?team:"Front Office";
@@ -638,7 +592,7 @@ function dxAttach(id,input){
 const dxOriginalService=services;
 services=function(){if(svcSelected!==null){const t=dxTicket(svcSelected);return dxOriginalService()+(t?dxDetailAddon(t):"")}return dxHome()};
 const dxOriginalAction=svcAction;
-svcAction=function(id,action){if(!dxRequire(action==="Void"?"void":"transition"))return;
+function svcAction(id,action){if(!dxRequire(action==="Void"?"void":"transition"))return;
  if(action==="Start"){dxTransition(id,action,"Work started");return}
  modal(action+" ticket #"+id,'<label>'+(action==="Complete"?"Resolution":action==="Stop"?"Reason for stopping":"Reason for void")+'<input name="note" required></label>',f=>{if(dxTransition(id,action,String(f.get("note")||"")))closeModal()});
 };
@@ -764,7 +718,7 @@ function dcAssignModal(id){
 }
 function dcAssignQuick(id){dcAssignModal(id)}
 // Replace the historical "team" assignment callback with the single employee model.
-svcAssign=function(id,value){
+function svcAssign(id,value){
  const employee=state.dxEmployees.find(x=>x.id===value);
  if(value==="Unassigned"||value===""){dxAssign(id,"");return}
  if(employee){dxAssign(id,employee.id);return}
