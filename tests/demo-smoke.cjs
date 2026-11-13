@@ -62,4 +62,25 @@ assert.equal(evaluate("svcChange("+voidTicket+",'Void','Duplicate service reques
 assert.equal(evaluate("state.tickets.find(t=>t.id==="+voidTicket+").voidReason"),"Duplicate service request");
 assert.ok(evaluate("state.tickets.find(t=>t.id==="+activeTicket+").completedAt"),"Completion timestamp saved");
 
+
+evaluate("nav('Front Desk')");
+assert.ok(elements.content.innerHTML.includes("Bell Service"),"Bell Service queue visible");
+assert.ok(elements.content.innerHTML.includes("Live Checkout"),"Live Checkout queue visible");
+assert.ok(elements.content.innerHTML.includes("Food Delivery"),"Food Delivery queue visible");
+assert.ok(evaluate("state.tickets.filter(t=>t.requestType==='Bell Service').length")>=4);
+assert.ok(evaluate("state.tickets.filter(t=>t.requestType==='Live Checkout').length")>=4);
+assert.ok(evaluate("state.tickets.filter(t=>t.requestType==='Food Delivery').length")>=4);
+const bellId=evaluate("state.tickets.find(t=>t.requestType==='Bell Service'&&t.status==='Open').id");
+evaluate("foOpen("+bellId+")");
+assert.ok(elements.content.innerHTML.includes("Ticket #"+bellId),"Front Office request opens shared detail view");
+assert.equal(evaluate("svcChange("+bellId+",'Start','')"),true);
+assert.equal(evaluate("svcChange("+bellId+",'Stop','Awaiting bell cart')"),true);
+assert.equal(evaluate("svcChange("+bellId+",'Start','')"),true);
+assert.equal(evaluate("svcChange("+bellId+",'Complete','Guest luggage delivered')"),true);
+const foodId=evaluate("state.tickets.find(t=>t.requestType==='Food Delivery'&&t.status==='Open').id");
+assert.equal(evaluate("svcChange("+foodId+",'Void','Duplicate food request')"),true);
+assert.equal(evaluate("state.tickets.find(t=>t.id==="+foodId+").voidReason"),"Duplicate food request");
+evaluate("nav('Service Dispatch')");
+assert.ok(elements.content.innerHTML.includes("Service Dispatch"),"Unified dispatch view still works");
+
 console.log("PASS: Hestia demo syntax, 11 views, 5 stay tabs, checkout gate, mock authorizations/captures/refunds.");
