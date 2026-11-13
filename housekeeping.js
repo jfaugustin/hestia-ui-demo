@@ -107,6 +107,18 @@ function hkPrompt(id,action){
   f=>{if(hkUpdate(id,"Service",String(f.get("kind")||"Departure")))closeModal()});
  }else hkUpdate(id,action);
 }
+function hkMarkDeparture(id){
+ const job=hkJob(id),room=hkRoom(id);
+ if(!job||!room)return false;
+ // Front Office checkout opens a new room-turnover workflow. No separate room database.
+ room.status="dirty";
+ job.kind="Departure";job.stage="Unassigned";job.assigneeId=null;
+ job.startedAt=null;job.finishedAt=null;job.inspectedAt=null;
+ job.inspectionRequired=true;job.holdReason="";
+ job.lastUpdate=new Date().toISOString();
+ hkLog(job,"Checkout turnover requested","Room requires cleaning and inspection before next arrival");
+ return true;
+}
 function hkSyncFromRooms(){
  // Only add metadata for new rooms; do not overwrite an active cleaning job.
  const exists=new Set((state.hkJobs||[]).map(j=>j.room));
