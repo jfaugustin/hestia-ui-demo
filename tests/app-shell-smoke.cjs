@@ -2,7 +2,7 @@ const fs=require("node:fs");
 const vm=require("node:vm");
 const assert=require("node:assert/strict");
 const html=fs.readFileSync("index.html","utf8");
-for(const asset of ["front-office.js?v=5","app-shell.js?v=6","app-shell.css?v=3","housekeeping.js?v=3","housekeeping.css?v=2"])
+for(const asset of ["front-office.js?v=5","app-shell.js?v=6","app-shell.css?v=3","housekeeping.js?v=4","housekeeping.css?v=2"])
  assert.ok(html.includes(asset),"Required versioned asset "+asset);
 const sources=[fs.readFileSync("core.js","utf8"),fs.readFileSync("front-office.js","utf8"),fs.readFileSync("app-shell.js","utf8"),fs.readFileSync("housekeeping.js","utf8")];
 for(const source of sources){assert.ok(source);new vm.Script(source)}
