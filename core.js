@@ -286,7 +286,7 @@ function foDue(t){
 function foOpen(id){svcSelected=Number(id);page="Service Dispatch";render()}
 desk=function(){return header("Front Office","Bell Service · Live Checkout · Food Delivery")};
 foInit();
-
+svcSeed();
 
 /* Dispatch 2.0 public preview — fake identities, local records, no cross-device synchronization */
 const DX_DEPTS=["Front Office","Bell Service","Valet","Housekeeping","Engineering","Security","Food & Beverage","IT","Spa & Recreation","Management","Transportation"];
