@@ -83,4 +83,33 @@ assert.equal(evaluate("state.tickets.find(t=>t.id==="+foodId+").voidReason"),"Du
 evaluate("nav('Service Dispatch')");
 assert.ok(elements.content.innerHTML.includes("Service Dispatch"),"Unified dispatch view still works");
 
+
+evaluate("nav('Service Dispatch')");
+for(const tab of ["Queue","Employees","Schedules","Analytics","Departments"]){
+ evaluate("dxSetTab("+JSON.stringify(tab)+")");
+ assert.ok(elements.content.innerHTML.length>500,"Dispatch 2.0 "+tab+" must render");
+}
+assert.ok(evaluate("state.dxEmployees.length")>=8,"On-duty employee roster seeded");
+assert.ok(evaluate("state.dxRecurring.length")>=3,"Preventive tasks seeded");
+evaluate("dxSetTab('Queue')");
+const dispatchId=evaluate("state.tickets.find(t=>t.team==='Bell Service'&&t.status==='Open'&&!t.employeeId).id");
+assert.equal(evaluate("dxAssign("+dispatchId+",'em-100')"),true,"Match employee and department");
+assert.equal(evaluate("dxTransition("+dispatchId+",'Start','')"),false,"Cannot start unacknowledged assigned ticket");
+assert.equal(evaluate("dxAck("+dispatchId+")"),true,"Assignee acknowledges assignment");
+assert.equal(evaluate("dxTransition("+dispatchId+",'Start','')"),true,"Acknowledged ticket can start");
+const beforeLink=evaluate("state.tickets.length");
+evaluate("dxCreateLinked("+dispatchId+",'Valet','Vehicle retrieval')");
+assert.equal(evaluate("state.tickets.length"),beforeLink+1,"Linked request created in separate department");
+assert.equal(evaluate("state.tickets.find(t=>t.id==="+dispatchId+").links.length"),1,"Parent retains linked child");
+const newChild=evaluate("state.tickets.find(t=>t.id==="+dispatchId+").links[0]");
+assert.ok(evaluate("state.tickets.find(t=>t.id==="+newChild+").links.includes("+dispatchId+")"),"Bidirectional linkage retained");
+const scheduleId=evaluate("state.dxRecurring.find(r=>r.interval===7).id");
+assert.equal(evaluate("dxRecurringRun("+scheduleId+",'2026-11-13')"),true,"Due scheduled work generated");
+assert.equal(evaluate("dxRecurringRun("+scheduleId+",'2026-11-13')"),false,"Recurring task is not generated twice");
+evaluate("dxSetRole('viewer')");
+assert.equal(evaluate("dxAssign("+dispatchId+",'em-100')"),false,"Preview viewer blocked from assignment");
+evaluate("dxSetRole('dispatcher')");
+evaluate("nav('Service Dispatch')");
+assert.ok(elements.content.innerHTML.includes("Dispatch Command"),"Unified command view renders");
+
 console.log("PASS: Hestia demo syntax, 11 views, 5 stay tabs, checkout gate, mock authorizations/captures/refunds.");
