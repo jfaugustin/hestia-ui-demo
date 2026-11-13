@@ -112,4 +112,14 @@ evaluate("dxSetRole('dispatcher')");
 evaluate("nav('Service Dispatch')");
 assert.ok(elements.content.innerHTML.includes("Dispatch Command"),"Unified command view renders");
 
+
+evaluate("dxSetRole('dispatcher')");
+const reopenId=evaluate("state.tickets.find(t=>t.status==='Completed').id");
+assert.equal(evaluate("dxReopen("+reopenId+",'Guest reported unresolved service')"),true,"Supervisor can reopen completed ticket");
+assert.equal(evaluate("state.tickets.find(t=>t.id==="+reopenId+").status"),"Open");
+assert.equal(evaluate("dxReopen("+reopenId+",'Repeated')"),false,"Cannot reopen already open ticket");
+const availableValet=evaluate("state.tickets.find(t=>t.team==='Valet'&&t.status==='Open'&&!t.employeeId).id");
+assert.equal(evaluate("dxAutoAssign("+availableValet+")"),true,"Auto-assign routes to available department staff");
+assert.equal(evaluate("state.tickets.find(t=>t.id==="+availableValet+").employeeId"),"em-105");
+
 console.log("PASS: Hestia demo syntax, 11 views, 5 stay tabs, checkout gate, mock authorizations/captures/refunds.");
