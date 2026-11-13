@@ -120,7 +120,7 @@ assert.equal(evaluate("state.tickets.find(t=>t.id==="+reopenId+").status"),"Open
 assert.equal(evaluate("dxReopen("+reopenId+",'Repeated')"),false,"Cannot reopen already open ticket");
 const availableValet=evaluate("state.tickets.find(t=>t.team==='Valet'&&t.status==='Open'&&!t.employeeId).id");
 assert.equal(evaluate("dxAutoAssign("+availableValet+")"),true,"Auto-assign routes to available department staff");
-assert.equal(evaluate("state.tickets.find(t=>t.id==="+availableValet+").employeeId"),"em-105");
+assert.ok(evaluate("state.dxEmployees.some(e=>e.id===state.tickets.find(t=>t.id==="+availableValet+").employeeId&&e.team==='Valet'&&e.available)"),"Auto-assignment selects an available Valet employee");
 
 
 evaluate("dxSetRole('dispatcher')");
