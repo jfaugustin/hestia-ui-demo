@@ -59,8 +59,8 @@ function h4RoomPage(){
  const rooms=state.rooms.filter(r=>h4RoomFilter==="All"||r.status===h4RoomFilter);
  const list='<div class="h4-card"><div class="h4-filter"><select id="h4RoomFilter" aria-label="Room status filter">'+
  svcOpts(["All","ready","occupied","dirty","out"],h4RoomFilter)+'</select></div>'+
- '<div class="h4-roomset">'+rooms.map(r=>'<button class="'+safe(r.status)+'" onclick="cycleRoom('+r.id+')" aria-label="Room '+r.id+', '+safe(r.status)+'">'+r.id+'<small>'+safe(r.status)+'</small></button>').join("")+'</div>'+
- '<p class="h4-small" style="margin-top:12px">This is the shared room inventory. Cleaning assignments and inspections belong to the Housekeeping department.</p></div>';
+ '<div class="h4-roomset">'+rooms.map(r=>'<button class="'+safe(r.status)+'" onclick="hkOpenRoom('+r.id+')" aria-label="View Housekeeping record for room '+r.id+', '+safe(r.status)+'">'+r.id+'<small>'+safe(r.status)+'</small></button>').join("")+'</div>'+
+ '<p class="h4-small" style="margin-top:12px">Open any room to review its Housekeeping record. Only a completed room inspection clears dirty-room readiness.</p></div>';
  return h4Hero("Rooms","Inventory and availability shared with Front Office and Housekeeping.",
  h4Btn("Open Housekeeping","nav('Housekeeping')"))+stats+list;
 }
