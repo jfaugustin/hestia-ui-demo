@@ -220,7 +220,7 @@ function hkTeam(){
  const people=hkStaff();
  return '<div class="hk-card"><div class="hk-subtitle"><strong>Attendants and room allocations</strong><span>'+people.length+' staff</span></div>'+
  people.map(e=>{const jobs=state.hkJobs.filter(j=>j.assigneeId===e.id&&j.stage!=="Ready");
-  return '<div class="hk-item"><div><strong>'+safe(e.name)+'</strong><div class="hk-muted">'+safe(e.shift)+' · '+jobs.length+' assigned rooms · '+(e.available?"Available":"Unavailable")+'</div><div class="hk-muted">'+safe(jobs.slice(0,12).map(j=>j.room).join(", ")||"No current rooms")+'</div></div><div class="hk-actions"><button class="hk-btn" onclick="dxToggleEmployee(\''+safe(e.id)+'\')">'+(e.available?"Mark unavailable":"Mark available")+'</button></div></div>';
+  return '<div class="hk-item"><div><strong>'+safe(e.name)+'</strong><div class="hk-muted">'+safe(e.shift)+' · '+jobs.length+' assigned rooms · '+hkCurrentLoad(e.id)+' workload credits · '+(e.available?"Available":"Unavailable")+'</div><div class="hk-muted">'+safe(jobs.slice(0,12).map(j=>j.room).join(", ")||"No current rooms")+'</div></div><div class="hk-actions"><button class="hk-btn" onclick="dxToggleEmployee(\''+safe(e.id)+'\')">'+(e.available?"Mark unavailable":"Mark available")+'</button></div></div>';
  }).join("")+'</div>';
 }
 function hkPassdown(){
@@ -410,10 +410,13 @@ function hkSupplyAdjust(){
 function hkInsights(){
  const jobs=state.hkJobs,completed=jobs.filter(j=>j.stage==="Ready"&&j.inspectedAt),failed=jobs.flatMap(j=>j.history||[]).filter(h=>h.event==="Inspection failed").length;
  const m=jobs.reduce((x,j)=>x+((j.stage==="Ready"||j.stage==="On hold")?0:hkCredits(j)),0);
+ const durations=jobs.filter(j=>j.startedAt&&j.finishedAt&&Date.parse(j.finishedAt)>=Date.parse(j.startedAt)).map(j=>(Date.parse(j.finishedAt)-Date.parse(j.startedAt))/60000);
+ const avgMinutes=durations.length?Math.round(durations.reduce((a,b)=>a+b,0)/durations.length):null;
  const discrepancies=state.rooms.filter(r=>r.status==="occupied"&&!state.reservations.some(x=>Number(x.room)===Number(r.id)&&x.status==="Checked in"));
  const rows='<div class="hk-card"><div class="hk-subtitle"><strong>Quality and workload</strong><span>Demo records</span></div>'+
  '<div class="hk-item"><div><strong>Inspected rooms</strong><div class="hk-muted">'+completed.length+' recorded approvals</div></div></div>'+
  '<div class="hk-item"><div><strong>Inspection corrections</strong><div class="hk-muted">'+failed+' failed checks</div></div></div>'+
+ '<div class="hk-item"><div><strong>Cleaning interval</strong><div class="hk-muted">'+(avgMinutes===null?"No measured completions yet":avgMinutes+" min average over "+durations.length+" completions")+' · illustrative timestamps</div></div></div>'+
  '<div class="hk-item"><div><strong>Open workload</strong><div class="hk-muted">'+m+' cleaning credits across active rooms</div></div></div>'+
  '<div class="hk-item"><div><strong>Occupancy reconciliation</strong><div class="hk-muted">'+discrepancies.length+' inventory/PMS mismatches in demo data · verify before action</div></div></div>'+
  '<div class="hk-notice">Metrics reflect illustrative browser data. They do not measure staff performance or replace verified labor records.</div></div>';
