@@ -32,6 +32,14 @@
 .svclog{border-top:1px solid #e8edf0;padding:10px 0;font-size:12px}.svclog small{display:block;color:#84929f;margin-top:4px}.svclog p{margin-top:6px;color:#4f6271;white-space:pre-wrap}
 @media(max-width:750px){.svcstats{grid-template-columns:repeat(2,1fr)}.svcgrid{grid-template-columns:1fr}.svcbar input{min-width:100%}.svcrow{align-items:flex-start}.svcright{flex-direction:column;align-items:flex-end}}
 
+
+/* Front Office request workbench */
+.fo-tabs{display:flex;gap:8px;overflow:auto;padding:0 0 11px}.fo-tabs button{border:1px solid #dbe2e7;border-radius:8px;padding:9px 12px;background:#fff;color:#4c6070;white-space:nowrap;font-size:12px;font-weight:600}.fo-tabs button.selected{background:#1d3545;color:white;border-color:#1d3545}
+.foquick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}.foquick button{background:#fff;border:1px solid #e4e8ec;border-radius:12px;padding:17px;text-align:left;min-height:102px}.foquick button:hover{border-color:#bb9363}.foquick strong{display:block;color:#213848;font-size:14px;margin-bottom:7px}.foquick span{display:block;color:#85929e;font-size:12px;line-height:1.5}
+.foqueue{display:grid;gap:9px}.foticket{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid #e7e9ed;border-radius:10px}.foticket strong{display:block;font-size:13px;color:#2b4350}.foticket small{display:block;color:#84939d;margin-top:7px;font-size:11px;line-height:1.5}
+.foformsub{font-size:11px;color:#7d8f9b;margin-top:9px}.fochip{color:#86633e;background:#faf0e2;padding:4px 7px;border-radius:5px;font-size:10px;font-weight:650}
+@media(max-width:700px){.foquick{grid-template-columns:1fr}.foquick button{min-height:75px;padding:12px}.foticket{align-items:start}.foticket .actions{justify-content:flex-end;flex-shrink:0}}
+
 </style></head><body>
 <div class="mobileoverlay" id="overlay" onclick="toggleMenu(false)"></div><div class="shell"><aside class="sidebar" id="sidebar"><div class="brand">HESTIA</div><div class="tagline">HOTEL OPERATING SYSTEM</div><nav class="nav" id="nav"></nav><div class="sidefoot">DEMONSTRATION ENVIRONMENT<br>Synthetic data only · Stored in this browser<br><button class="secondary" style="margin-top:9px" onclick="resetDemo()">Reset demo</button></div></aside>
 <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="menu" onclick="toggleMenu(true)">☰</button><div><div class="prop">Grand Hotel <span style="font-weight:400;color:#8494a1">/ Demo Property</span></div><div class="tiny">Independent luxury hotel · 120 rooms</div></div></div><div class="topright"><span class="desktop subtle">Business date · November 12, 2026</span><span>◉</span><div class="avatar">HM</div></div></header><div class="content" id="content"></div></main></div><div id="modalroot"></div>
@@ -352,6 +360,100 @@ render=function(){
  if(search)search.oninput=e=>{svcQuery=e.target.value;const pos=e.target.selectionStart;render();const input=document.getElementById("svcSearch");input?.focus();input?.setSelectionRange?.(pos,pos)};
  if(filter)filter.onchange=e=>{svcFilter=e.target.value;render()};
 };
+
+
+/* Front Office guest-services workflow: native synthetic service tickets */
+const FO_TYPES={
+ "Bell Service":{team:"Front Office",priority:"Normal",sla:15,summary:"Bell and luggage assistance"},
+ "Live Checkout":{team:"Front Office",priority:"High",sla:10,summary:"In-person guest checkout assistance"},
+ "Food Delivery":{team:"Food & Beverage",priority:"Normal",sla:30,summary:"In-room dining delivery / escort"}
+};
+let foView="Active";
+function foInit(){
+ if(!state.foSeeded){
+  const rooms=[205,207,212,223,307,318,409,421,504,519,529,601];
+  const kinds=["Bell Service","Live Checkout","Food Delivery"];
+  for(let i=0;i<12;i++){
+   const kind=kinds[i%3],config=FO_TYPES[kind];
+   const id=65000+i,room=rooms[i],r=state.reservations.find(x=>Number(x.room)===room);
+   const t={id,title:config.summary,location:"Room "+room,room,team:config.team,category:kind,requestType:kind,priority:i%5===0?"High":config.priority,assignee:"Unassigned",status:i%5===0?"Started":i%7===0?"Stopped":"Open",createdAt:new Date(Date.now()-(i*5+2)*60000).toISOString(),dueAt:new Date(Date.now()+(config.sla-i*4)*60000).toISOString(),guest:r?.guest||"Demo Guest",reservationId:r?.id||null,description:kind==="Bell Service"?"Assist guest with luggage; confirm bell cart and destination.":kind==="Live Checkout"?"Guest requests assistance with live checkout at Front Desk. Verify folio separately.":"Coordinate in-room dining order delivery and notify guest; no payment data.",notes:[],history:[{event:"Created",note:"Front Office guest service request",at:new Date(Date.now()-(i*5+2)*60000).toISOString(),by:"Demo system"}]};
+   state.tickets.push(t);
+  }
+  state.foSeeded=true;save();
+ }
+ state.tickets.filter(t=>FO_TYPES[t.requestType]).forEach(t=>{
+  if(!t.dueAt)t.dueAt=new Date(Date.parse(t.createdAt||new Date().toISOString())+FO_TYPES[t.requestType].sla*60000).toISOString();
+  if(!t.category)t.category=t.requestType;
+ });
+ save();
+}
+function foTicketActions(t){
+ const tags=[];
+ if(["Open","Stopped"].includes(t.status))tags.push("Start");
+ if(t.status==="Started")tags.push("Stop","Complete");
+ if(["Open","Started","Stopped"].includes(t.status))tags.push("Void");
+ return tags.map(a=>'<button class="secondary" onclick="svcAction('+t.id+',\''+a+'\')">'+a+'</button>').join("");
+}
+function foDue(t){
+ if(["Completed","Voided"].includes(t.status))return "Closed";
+ const m=Math.round((Date.parse(t.dueAt)-Date.now())/60000);
+ return m<0?"Overdue "+Math.abs(m)+"m":m===0?"Due now":"Due in "+m+"m";
+}
+function foNew(kind){
+ const config=FO_TYPES[kind];
+ if(!config)return flash("Invalid service type");
+ const related=state.reservations.filter(r=>["Reserved","Checked in"].includes(r.status)).slice(0,90);
+ const options='<option value="">No linked reservation</option>'+related.map(r=>'<option value="'+r.id+'">'+safe(r.guest)+" · "+safe(r.confirmation)+" · "+r.room+'</option>').join("");
+ const specifics=kind==="Bell Service"?'<label>Service direction<select name="direction"><option>Arrival assistance</option><option>Departure luggage pickup</option><option>Luggage storage</option><option>Vehicle loading assistance</option></select></label>':
+ kind==="Live Checkout"?'<label>Checkout request<select name="direction"><option>Front Desk assistance</option><option>Guest requests express departure</option><option>Folio review / billing question</option><option>Bell assistance requested</option></select></label>':
+ '<label>Delivery type<select name="direction"><option>IRD order delivery</option><option>Third-party food delivery</option><option>Delivery pickup from lobby</option><option>Guest amenity delivery</option></select></label>';
+ modal("New "+kind+" request",
+ '<label>Guest / requestor<input name="guest" required placeholder="Guest name or department"></label>'+
+ '<label>Room or delivery location<input name="location" required placeholder="Room 814 or lobby"></label>'+
+ '<label>Linked reservation (optional)<select name="reservation">'+options+'</select></label>'+
+ specifics+
+ '<label>Priority<select name="priority">'+svcOpts(SVC_PRIORITIES,config.priority)+'</select></label>'+
+ '<label>Assigned to<select name="assignee">'+svcOpts(["Unassigned","Bell team","Front Desk team","IRD team","Guest Services team","Food & Beverage team"],"Unassigned")+'</select></label>'+
+ '<label>Instructions<input name="description" required placeholder="Dispatch instructions or delivery notes"></label>',f=>{
+  const guest=String(f.get("guest")||"").trim(),location=String(f.get("location")||"").trim(),description=String(f.get("description")||"").trim(),rId=Number(f.get("reservation"));
+  const linked=state.reservations.find(x=>x.id===rId);
+  const roomMatch=location.match(/\b\d{3,4}\b/);
+  const room=roomMatch?Number(roomMatch[0]):linked?.room||null;
+  if(!guest||!location||!description)return flash("Guest, location and instructions are required");
+  if(linked&&room!==linked.room)return flash("Linked reservation room does not match request location");
+  const id=Math.max(65000,...state.tickets.map(x=>Number(x.id)||0))+1;
+  const dueAt=new Date(Date.now()+config.sla*60000).toISOString();
+  const ticket={id,title:kind+" — "+guest,requestType:kind,category:kind,room,location,guest,reservationId:linked?.id||null,team:config.team,priority:String(f.get("priority")),assignee:String(f.get("assignee")),description:String(f.get("direction"))+" · "+description,status:"Open",createdAt:new Date().toISOString(),dueAt,notes:[],history:[]};
+  state.tickets.unshift(ticket);svcRecord(ticket,"Created","Front Office "+kind+" request; SLA target "+config.sla+" minutes");
+  closeModal();svcSelected=id;page="Service Dispatch";render();flash("Guest service ticket #"+id+" created");
+ });
+}
+function frontOfficeWorkspace(){
+ const all=state.tickets.filter(t=>FO_TYPES[t.requestType]);
+ const items=all.filter(t=>foView==="All"||foView==="Active"&&!["Completed","Voided"].includes(t.status)||foView===t.requestType);
+ const open=all.filter(t=>!["Completed","Voided"].includes(t.status));
+ const urgent=open.filter(t=>Date.parse(t.dueAt)<Date.now());
+ return header("Front Office","Real-time guest assistance, bell service, live checkout and food delivery.")+
+ '<div class="foquick">'+Object.entries(FO_TYPES).map(([name,c])=>'<button onclick="foNew(\''+name+'\')"><strong>+ '+name+'</strong><span>'+c.summary+' · '+c.sla+' min target</span></button>').join("")+'</div>'+
+ '<div class="svcstats"><div class="svcstat"><span>Open requests</span><strong>'+open.length+'</strong></div><div class="svcstat"><span>Started</span><strong>'+open.filter(t=>t.status==="Started").length+'</strong></div><div class="svcstat"><span>Stopped</span><strong>'+open.filter(t=>t.status==="Stopped").length+'</strong></div><div class="svcstat"><span>Past target</span><strong>'+urgent.length+'</strong></div></div>'+
+ panel("Guest service queue",'<div class="fo-tabs">'+["Active","All",...Object.keys(FO_TYPES)].map(t=>'<button class="'+(foView===t?"selected":"")+'" onclick="foSetView(\''+t+'\')">'+t+'</button>').join("")+'</div>'+
+ '<div class="foqueue">'+(items.length?items.map(t=>'<div class="foticket"><div style="min-width:0"><button class="svctitle" onclick="foOpen('+t.id+')">#'+t.id+' · '+safe(t.requestType)+'</button><strong>'+safe(t.guest||"Guest")+' · '+safe(t.location)+'</strong><small>'+safe(t.description)+' · '+safe(t.assignee)+' · '+safe(t.priority)+' priority</small><small>'+safe(foDue(t))+'</small></div><div class="actions">'+svcTag(t)+'<button class="secondary" onclick="foOpen('+t.id+')">Details</button></div></div>').join(""):'<div class="empty">No matching Front Office tickets.</div>')+'</div>')+
+ '<div class="section">'+panel("Front Desk reservations",'<p class="muted" style="margin-bottom:13px">Guest checkout requests are service tickets, not financial checkout transactions. Open the reservation to review the folio and perform checkout separately.</p>'+state.reservations.filter(r=>r.status==="Checked in").slice(0,8).map(r=>'<div class="line"><div><button class="clickable" onclick="openDetail('+r.id+')">'+safe(r.guest)+'</button><div class="tiny">Room '+r.room+' · '+safe(r.confirmation)+'</div></div><button class="secondary" onclick="foFromReservation('+r.id+')">Checkout request</button></div>').join(""))+'</div>';
+}
+function foSetView(v){foView=v;render()}
+function foOpen(id){svcSelected=Number(id);page="Service Dispatch";render()}
+function foFromReservation(id){
+ const r=state.reservations.find(x=>x.id===Number(id));if(!r)return;
+ foNew("Live Checkout");
+ const form=document.getElementById("newform");
+ if(form){
+  if(form.elements.guest)form.elements.guest.value=r.guest;
+  if(form.elements.location)form.elements.location.value="Room "+r.room;
+  if(form.elements.reservation)form.elements.reservation.value=String(r.id);
+ }
+}
+desk=function(){return frontOfficeWorkspace()};
+foInit();
 
 render();
 </script></body></html>
