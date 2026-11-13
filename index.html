@@ -997,8 +997,12 @@ function migrateLegacyDemoDates(){
    for(const event of r.audit||[])if(event.at&&/^\d{4}-\d{2}-\d{2}$/.test(event.at))event.at=datePlus(event.at,delta);
   }
  }
+ const originalShift=Math.round((Date.parse(DEMO_DATE+"T12:00:00Z")-Date.parse("2026-11-12T12:00:00Z"))/86400000);
  for(const r of state.reservations.filter(r=>[1001,1002,1003].includes(r.id))){
-  if(delta&&r.arrival?.startsWith("2026-11")){r.arrival=datePlus(r.arrival,delta);r.departure=datePlus(r.departure,delta)}
+  if(originalShift&&r.arrival?.startsWith("2026-11")&&r.departure?.startsWith("2026-11")){
+   r.arrival=datePlus(r.arrival,originalShift);r.departure=datePlus(r.departure,originalShift);
+   for(const entry of r.folio||[])if(entry.at&&/^\d{4}-\d{2}-\d{2}$/.test(entry.at))entry.at=datePlus(entry.at,originalShift);
+  }
  }
  state.demoCalendarAligned=true;
  save();
