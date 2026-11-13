@@ -18,6 +18,7 @@ vm.createContext(ctx);
 vm.runInContext(js,ctx,{filename:"hestia-demo.js"});
 vm.runInContext(fs.readFileSync("front-office.js","utf8"),ctx,{filename:"front-office.js"});
 vm.runInContext(fs.readFileSync("app-shell.js","utf8"),ctx,{filename:"app-shell.js"});
+vm.runInContext(fs.readFileSync("housekeeping.js","utf8"),ctx,{filename:"housekeeping.js"});
 const evaluate=s=>vm.runInContext(s,ctx);
 assert.equal(evaluate("state.rooms.length"),120,"120-room demonstration");
 assert.ok(evaluate("state.reservations.length")>=95,"Reservation register is populated");
