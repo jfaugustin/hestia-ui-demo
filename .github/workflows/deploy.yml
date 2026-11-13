@@ -5,6 +5,7 @@ on:
     paths:
       - 'index.html'
       - '.github/workflows/deploy.yml'
+      - 'tests/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Verify Hestia demo workflows
+        run: node tests/demo-smoke.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
