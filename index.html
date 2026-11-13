@@ -826,6 +826,7 @@ svcAssign=function(id,value){
 };
 const dcOldAssign=dxAssign;
 dxAssign=function(id,employeeId){
+ if(!dxRequire("assign"))return false;
  const t=dxTicket(id);
  if(!t||["Completed","Voided"].includes(t.status))return false;
  if(employeeId==="Unassigned")employeeId="";
@@ -839,8 +840,7 @@ dxAssign=function(id,employeeId){
 function dcFilterSet(value){dcStatus=value;render()}
 function dcMainTab(value){dxTab=value;svcSelected=null;render()}
 function dcQueue(){
- const tickets=state.tickets.filter(t=>dcStatus==="All"||
-  dcStatus==="Active"?!["Completed","Voided"].includes(t.status):t.status===dcStatus);
+ const tickets=state.tickets.filter(t=>dcStatus==="All"||(dcStatus==="Active"?!["Completed","Voided"].includes(t.status):t.status===dcStatus));
  const q=dxSearch.trim().toLowerCase();
  const rows=tickets.filter(t=>(dxDepartment==="All"||dxDepartment===t.team)&&
   (String(t.id)+" "+t.title+" "+t.team+" "+t.location+" "+(t.category||"")+" "+dcOwner(t)).toLowerCase().includes(q));
@@ -909,6 +909,25 @@ function dcDetail(){
 }
 // Replace the nested legacy detail view and duplicate assignment panels.
 services=function(){return svcSelected!==null?dcDetail():dcHome()};
+
+const dcOriginalRender=render;
+render=function(){
+ dcOriginalRender();
+ if(page!=="Service Dispatch"||svcSelected!==null)return;
+ const query=document.getElementById("dxSearch");
+ if(query)query.oninput=e=>{
+   dxSearch=e.target.value;
+   const cursor=e.target.selectionStart;
+   render();
+   const again=document.getElementById("dxSearch");
+   if(again){again.focus();again.setSelectionRange(cursor,cursor)}
+ };
+ const dept=document.getElementById("dxDept");
+ if(dept)dept.onchange=e=>{dxDepartment=e.target.value;render()};
+ const status=document.getElementById("dcStatus");
+ if(status)status.onchange=e=>dcFilterSet(e.target.value);
+};
+
 dcStaffBootstrap();
 
 render();
