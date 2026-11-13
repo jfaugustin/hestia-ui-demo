@@ -111,7 +111,7 @@ function resetDemo(){if(!confirm("Reset all synthetic demo data?"))return;state=
 function exportDemo(){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="hestia-demo-data.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
 /* v1.2 viability preview: entirely synthetic and non-payment-processing */
-const DEMO_DATE="2026-11-12";
+const DEMO_DATE=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 let selectedReservation=null,detailTab="Stay",reservationSearch="";
 const sampleFirst=["Amelia","Oliver","Sofia","Daniel","Maya","Ethan","Naomi","Lucas","Harper","Isabel","Jordan","Avery","Elena","Miles","Zoe","Caleb","Iris","Gabriel","Priya","Theo"];
 const sampleLast=["Hart","Chen","Bennett","Reyes","Patel","Walker","Kim","Foster","Martin","Diaz","Nakamura","Rivera","Cole","Brooks","Morgan","Singh","Lewis","Price","Hughes","Young"];
@@ -208,7 +208,7 @@ overview=function(){
  const active=state.reservations.filter(r=>r.status==="Checked in");
  const occupancy=Math.round((active.length/state.rooms.length)*1000)/10;
  const arrivals=state.reservations.filter(r=>r.arrival===DEMO_DATE&&r.status!=="Cancelled").length;
- const open=state.tickets.filter(t=>t.status!=="Complete").length;
+ const open=state.tickets.filter(t=>!["Completed","Voided"].includes(t.status)).length;
  const roomRevenue=state.reservations.filter(r=>r.status!=="Cancelled").reduce((sum,r)=>sum+r.folio.filter(x=>x.type==="Charge"&&x.description.startsWith("Room charges")).reduce((n,x)=>n+x.amount,0),0);
  const levels=Array.from({length:7},(_,i)=>{
    const day=datePlus(DEMO_DATE,i-6);
@@ -281,6 +281,12 @@ function svcRecord(t,event,note){
 function svcChange(id,action,note){
  const t=state.tickets.find(x=>x.id===Number(id));
  if(!t)return false;
+ if(typeof dxRole!=="undefined"&&typeof DX_ROLES!=="undefined"){
+  const permission=action==="Void"?"void":"transition";
+  if(!DX_ROLES[dxRole]?.includes(permission)){flash("This role cannot change ticket status");return false;}
+  if(dxRole==="staff"&&t.employeeId&&t.employeeId!==dxActingEmployeeId){flash("Ticket assigned to another employee");return false;}
+  if(action==="Start"&&t.employeeId&&!t.acknowledgedAt){flash("Assignment must be acknowledged before starting");return false;}
+ }
  const allowed={Start:["Open","Stopped"],Stop:["Started"],Complete:["Started"],Void:["Open","Stopped","Started"]};
  if(!(allowed[action]||[]).includes(t.status)){flash("Action unavailable for a "+t.status.toLowerCase()+" ticket");return false;}
  if(["Stop","Complete","Void"].includes(action)&&!String(note||"").trim()){flash("A reason or resolution is required");return false;}
@@ -496,7 +502,7 @@ const DX_CATEGORIES={
  "Transportation":["House car","Driver assignment","Airport transfer"]
 };
 const DX_ROLES={dispatcher:["create","assign","ack","transition","void","escalate","notes","schedule"],supervisor:["create","assign","ack","transition","void","escalate","notes","schedule"],staff:["create","ack","transition","notes"],viewer:[]};
-let dxRole="dispatcher",dxDepartment="All",dxTab="Queue",dxSearch="",dxStaff="All";
+let dxRole="dispatcher",dxDepartment="All",dxTab="Queue",dxSearch="",dxStaff="All",dxActingEmployeeId=null;
 function dxEmployees(){
  return [{id:"em-100",name:"Alex Rivera",team:"Bell Service",shift:"AM",available:true},
  {id:"em-101",name:"Morgan Lee",team:"Front Office",shift:"PM",available:true},
@@ -550,11 +556,17 @@ function dxAssign(id,employeeId){
 function dxAck(id){
  if(!dxRequire("ack"))return false;
  const t=dxTicket(id);if(!t||!t.employeeId||t.acknowledgedAt||["Voided","Completed"].includes(t.status))return false;
- t.acknowledgedAt=new Date().toISOString();dxEvent(t,"Acknowledged",t.assignee+" accepted work");render();return true;
+ if(dxRole==="staff"&&dxActingEmployeeId!==t.employeeId){flash("Only the assigned employee can acknowledge this ticket");return false;}
+ if(dxRole==="viewer")return false;
+ t.acknowledgedAt=new Date().toISOString();
+ t.acknowledgedBy=dxRole==="staff"?t.employeeId:"Demo dispatcher";
+ dxEvent(t,dxRole==="staff"?"Acknowledged by assigned employee":"Acknowledgment confirmed by dispatcher",dxRole==="staff"?t.assignee+" accepted work":"Dispatcher recorded acknowledgment on behalf of "+t.assignee);
+ render();return true;
 }
 function dxTransition(id,action,note){
  if(!dxRequire(action==="Void"?"void":"transition"))return false;
  const t=dxTicket(id);if(!t)return false;
+ if(dxRole==="staff"&&t.employeeId&&t.employeeId!==dxActingEmployeeId){flash("Assigned to another employee");return false}
  if(action==="Start"&&t.employeeId&&!t.acknowledgedAt){flash("Assigned employee must acknowledge before starting");return false}
  return svcChange(id,action,note);
 }
@@ -567,15 +579,19 @@ function dxLink(parent,child){
  dxEvent(a,"Linked request","#"+b.id);dxEvent(b,"Linked request","#"+a.id);render();return true;
 }
 function dxEscalations(){
- const now=Date.now(),due=state.tickets.filter(t=>!["Voided","Completed"].includes(t.status)&&Date.parse(t.dueAt)<now);
- due.forEach(t=>{if(t.escalated)return;t.escalated=true;dxEvent(t,"SLA escalated","Overdue ticket flagged for supervisor review")});
- return due;
+ return state.tickets.filter(t=>!["Voided","Completed"].includes(t.status)&&Number.isFinite(Date.parse(t.dueAt))&&Date.parse(t.dueAt)<Date.now());
+}
+function dxProcessEscalations(){
+ if(!dxRequire("escalate"))return 0;
+ const newAlerts=dxEscalations().filter(t=>!t.escalated);
+ for(const t of newAlerts){t.escalated=true;t.escalatedAt=new Date().toISOString();dxEvent(t,"SLA escalated","Supervisor review required");}
+ render();flash(newAlerts.length+" overdue ticket(s) escalated");return newAlerts.length;
 }
 function dxTeamTag(t){return t.team==="Front Office"&&t.requestType? t.requestType:t.team}
 function dxRecurringRun(id,nowDate){
  if(!dxRequire("schedule"))return false;
  const rule=state.dxRecurring.find(x=>x.id===Number(id));if(!rule||!rule.enabled)return false;
- const today=nowDate||new Date().toISOString().slice(0,10);
+ const today=nowDate||DEMO_DATE;
  if((Date.parse(today)-Date.parse(rule.last))/86400000<rule.interval)return false;
  const unique=rule.id+"-"+today;
  if(state.tickets.some(t=>t.scheduleKey===unique))return false;
@@ -733,10 +749,9 @@ function dxAutoDispatchQueue(){
  if(!dxRequire("assign"))return;
  let count=0;
  for(const t of state.tickets.filter(x=>["Open","Stopped"].includes(x.status)&&!x.employeeId)){
-   const worker=state.dxEmployees.filter(e=>e.team===t.team&&e.available).sort((a,b)=>a.id.localeCompare(b.id))[0];
-   if(worker && dxAutoAssign(t.id))count++;
+  if(state.dxEmployees.some(e=>e.team===t.team&&e.available)&&dxAutoAssign(t.id))count++;
  }
- render();flash(count+" tickets automatically assigned in demo");
+ render();flash(count+" tickets assigned by department workload");
 }
 function dxReopen(id,note){
  if(!dxRequire("escalate"))return false;
@@ -929,6 +944,43 @@ render=function(){
 };
 
 dcStaffBootstrap();
+
+
+/* Operational fixes — explicit mode, accurate SLA processing, editable request details. */
+function dxActAs(id){const e=state.dxEmployees.find(x=>x.id===id);if(!e)return;dxActingEmployeeId=e.id;dxRole="staff";render()}
+function dcCorrect(id){
+ if(!dxRequire("assign"))return;
+ const t=dxTicket(id);if(!t||["Completed","Voided"].includes(t.status))return flash("Closed requests cannot be corrected");
+ modal("Correct ticket #"+id,
+ '<label>Request summary<input name="title" required value="'+safe(t.title)+'"></label>'+
+ '<label>Location<input name="location" required value="'+safe(t.location)+'"></label>'+
+ '<label>Department<select name="team">'+svcOpts(DX_DEPTS,t.team)+'</select></label>'+
+ '<label>Reason for correction<input name="reason" required placeholder="Explain the correction"></label>',f=>{
+ const title=String(f.get("title")||"").trim(),location=String(f.get("location")||"").trim(),team=String(f.get("team")||""),reason=String(f.get("reason")||"").trim();
+ if(!title||!location||!reason||!DX_DEPTS.includes(team))return flash("Complete all correction fields");
+ const before=t.title+" / "+t.location+" / "+t.team;
+ t.title=title;t.location=location;
+ if(t.team!==team){t.team=team;t.employeeId=null;t.assignee="Unassigned";t.acknowledgedAt=null;}
+ const mt=location.match(/\b\d{3,4}\b/);t.room=mt?Number(mt[0]):null;
+ dxEvent(t,"Ticket corrected",before+" → "+title+" / "+location+" / "+team+" · "+reason);
+ closeModal();render();flash("Correction recorded");
+ });
+}
+const dcDetailBeforeFix=dcDetail;
+dcDetail=function(){
+ const original=dcDetailBeforeFix();
+ const t=dxTicket(svcSelected);
+ if(!t||["Completed","Voided"].includes(t.status)||!dxPermission("assign"))return original;
+ return original.replace('<div class="dc-details">','<div class="dxactions" style="margin-bottom:12px"><button class="dc-btn" onclick="dcCorrect('+t.id+')">Correct request details</button></div><div class="dc-details">');
+};
+const dcHomeBeforeFix=dcHome;
+dcHome=function(){
+ const s=dcHomeBeforeFix();
+ const role='<div class="dc-filters" style="margin:0 0 12px"><label class="dc-hint">Preview role <select aria-label="Preview user role" onchange="dxSetRole(this.value)">'+svcOpts(Object.keys(DX_ROLES),dxRole)+'</select></label>'+
+ (dxRole==="staff"?'<label class="dc-hint">Acting employee <select aria-label="Acting employee" onchange="dxActAs(this.value)">'+svcOpts(["",...state.dxEmployees.map(e=>e.id)],dxActingEmployeeId||"")+'</select></label>':'')+'</div>';
+ const controls='<div class="dxactions" style="margin-bottom:12px"><button class="dc-btn" onclick="dxProcessEscalations()">Process overdue alerts</button><button class="dc-btn" onclick="dxAutoDispatchQueue()">Auto-assign unassigned</button></div>';
+ return s.replace('<div class="dc-toolbar">',role+'<div class="dc-toolbar">').replace('<div class="dc-stats">',controls+'<div class="dc-stats">');
+};
 
 render();
 </script></body></html>
