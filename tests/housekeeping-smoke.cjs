@@ -104,7 +104,9 @@ assert.equal(e("hkUpdate("+dnd+",'Start')"),false,"Do Not Disturb blocks room en
 e("hkSetPreference("+dnd+")");
 ctx.captured.done({get:k=>({preference:"None",reason:"Guest now requests service"})[k]||""});
 assert.equal(e("hkJob("+dnd+").stage"),"Assigned","Service resumes only after guest preference cleared");
-const defectRoom=e("state.hkJobs.find(j=>j.stage==='Awaiting inspection').room");
+const defectRoom=e("state.hkJobs.find(j=>j.stage==='Assigned'&&j.assigneeId&&!j.guestPreference).room");
+assert.equal(e("hkUpdate("+defectRoom+",'Start')"),true);
+assert.equal(e("hkUpdate("+defectRoom+",'Submit')"),true);
 e("hkReportDefect("+defectRoom+")");
 ctx.captured.done({get:k=>({issue:"Leaking faucet",block:"yes"})[k]||""});
 assert.equal(e("hkJob("+defectRoom+").maintenanceBlocks.length"),1,"Repair request creates release-blocking link");
