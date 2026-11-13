@@ -116,6 +116,12 @@ render=function(){
  if(dt)dt.textContent="Business date · "+DEMO_DATE;
  const roomFilter=document.getElementById("h4RoomFilter");
  if(roomFilter)roomFilter.onchange=e=>{h4RoomFilter=e.target.value;render()};
+ const guestSearch=document.getElementById("reservationSearch")||document.getElementById("guestSearch");
+ if(guestSearch)guestSearch.oninput=e=>{
+  reservationSearch=e.target.value;const position=e.target.selectionStart;render();
+  const next=document.getElementById("reservationSearch")||document.getElementById("guestSearch");
+  if(next){next.focus();next.setSelectionRange(position,position)}
+ };
 };
 const h4PreviousNav=nav;
 nav=function(next){
