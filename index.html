@@ -46,6 +46,24 @@
 @media(max-width:760px){.dxstats,.dxgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dxcard{padding:11px}.dxhead{align-items:flex-start;flex-direction:column}}
 @media(max-width:420px){.dxstats{grid-template-columns:repeat(2,minmax(0,1fr))}.dxgrid{grid-template-columns:1fr}}
 
+
+/* Dispatch 2.2 — simplified assignment and compact operational layout */
+.dc-toolbar{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 15px}
+.dc-tabs{display:flex;gap:5px;overflow:auto;scrollbar-width:none}.dc-tabs button{padding:10px 13px;border:0;background:transparent;border-bottom:2px solid transparent;color:#697b8b;font-size:12px;font-weight:650;white-space:nowrap}.dc-tabs button.active{border-color:#c69c61;color:#243f50}
+.dc-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.dc-stat{background:white;border:1px solid #e4eaf0;border-radius:10px;padding:13px}.dc-stat strong{display:block;font:25px Georgia,serif;color:#203848}.dc-stat span{font-size:11px;color:#7c8d9b}
+.dc-filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 13px}.dc-filters input,.dc-filters select{border:1px solid #dde5e9;background:#fff;padding:10px 12px;border-radius:8px;color:#284050;font-size:12px;min-width:130px;flex:1}.dc-filters input{flex:2;min-width:185px}
+.dc-ticket{border-top:1px solid #e8edf0;padding:15px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center}
+.dc-ticket:first-child{border-top:0}.dc-ticket-title{font-size:13px;text-align:left;background:none;border:0;padding:0;color:#243c4c;font-weight:700}.dc-ticket-title:hover{text-decoration:underline}.dc-ticket-sub{color:#8493a0;font-size:11px;margin:7px 0 0;line-height:1.6}.dc-ticket-actions{display:flex;align-items:center;gap:7px;justify-content:flex-end;flex-wrap:wrap}
+.dc-btn{border:1px solid #dce4e9;border-radius:8px;background:#fff;color:#304a5a;padding:9px 11px;font-size:12px;font-weight:600}.dc-btn.primary{background:#1c3544;border-color:#1c3544;color:white}.dc-btn:disabled{opacity:.45;cursor:default}
+.dc-assignee{font-size:12px;font-weight:650;color:#2d4555}.dc-status{font-size:11px;color:#697e8c}.dc-overdue{color:#a44e3b;font-weight:700}.dc-detail-head{margin:0 0 16px}.dc-details{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(240px,1fr);gap:14px}.dc-detail-footer{margin-top:15px}
+.dc-line{border-bottom:1px solid #ebeff2;padding:11px 0;display:flex;justify-content:space-between;gap:14px;font-size:12px}.dc-line span{color:#8494a1}.dc-line strong{text-align:right;color:#294253;overflow-wrap:anywhere}
+.dc-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:13px}.dc-fields label{font-size:12px;color:#536b7a}.dc-fields select{width:100%;border:1px solid #dbe4e9;border-radius:8px;padding:10px;background:#fff;margin-top:5px}
+.dc-assign-card{border:1px solid #e0e8ed;background:#f6f8fa;padding:13px;border-radius:9px;margin:12px 0}.dc-assign-card strong{display:block;color:#263e4e}.dc-assign-card p{margin:4px 0 0;font-size:11px;color:#718694}
+.dc-employee{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #e7edf1;padding:12px 0}.dc-employee:last-child{border-bottom:0}.dc-employee strong{display:block;font-size:13px}.dc-employee small{display:block;color:#7d90a0;margin-top:5px}
+.dc-hint{color:#788b99;font-size:11px;line-height:1.55}
+@media(max-width:780px){.dc-details{grid-template-columns:1fr}.dc-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-ticket{grid-template-columns:1fr}.dc-ticket-actions{justify-content:flex-start}.dc-toolbar{align-items:stretch}.dc-toolbar .dc-tabs{width:100%}.dc-filters input{min-width:100%}}
+
 </style></head><body>
 <div class="mobileoverlay" id="overlay" onclick="toggleMenu(false)"></div><div class="shell"><aside class="sidebar" id="sidebar"><div class="brand">HESTIA</div><div class="tagline">HOTEL OPERATING SYSTEM</div><nav class="nav" id="nav"></nav><div class="sidefoot">DEMONSTRATION ENVIRONMENT<br>Synthetic data only · Stored in this browser<br><button class="secondary" style="margin-top:9px" onclick="resetDemo()">Reset demo</button></div></aside>
 <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="menu" onclick="toggleMenu(true)">☰</button><div><div class="prop">Grand Hotel <span style="font-weight:400;color:#8494a1">/ Demo Property</span></div><div class="tiny">Independent luxury hotel · 120 rooms</div></div></div><div class="topright"><span class="desktop subtle">Business date · November 12, 2026</span><span>◉</span><div class="avatar">HM</div></div></header><div class="content" id="content"></div></main></div><div id="modalroot"></div>
@@ -746,6 +764,152 @@ const dxPriorDetailAddon=dxDetailAddon;
 dxDetailAddon=function(t){
  return dxPriorDetailAddon(t)+'<div class="dxsection">'+panel("Dispatch lifecycle",'<div class="dxactions"><button onclick="dxAutoAssign('+t.id+')">Auto-assign available employee</button>'+(t.status==="Completed"?'<button onclick="dxReopenPrompt('+t.id+')">Reopen completed ticket</button>':"")+'</div><p class="hint" style="margin-top:10px">Voided tickets remain terminal. Reopening preserves the audit record and requires a documented reason. Notification previews are browser-local; they are not staff mobile push alerts.</p>')+'</div>';
 };
+
+
+/* Dispatch 2.2 — one employee assignment model, one detail view, simpler navigation. */
+let dcStatus="Active";
+function dcStaffBootstrap(){
+ if(!DX_DEPTS.includes("Guest Services"))DX_DEPTS.push("Guest Services");
+ if(!DX_CATEGORIES["Guest Services"])DX_CATEGORIES["Guest Services"]=["Guest request","Amenity delivery","Guest concern"];
+ if(!Array.isArray(state.dxEmployees))state.dxEmployees=dxEmployees();
+ const additions=[
+  ["em-110","Robin Alvarez","Bell Service","PM"],["em-111","Devon Ellis","Front Office","AM"],
+  ["em-112","Chris Moreno","Housekeeping","PM"],["em-113","Parker Wells","Engineering","AM"],
+  ["em-114","Mia Stone","Security","AM"],["em-115","Drew Parker","Valet","AM"],
+  ["em-116","Skylar Green","Food & Beverage","AM"],["em-117","Alex Jordan","IT","PM"],
+  ["em-118","Cameron Brooks","Transportation","PM"],["em-119","Rowan White","Spa & Recreation","PM"],
+  ["em-120","Jordan Scott","Guest Services","AM"],["em-121","Sasha Tran","Guest Services","PM"],
+  ["em-122","Nico Blake","Management","AM"],["em-123","Taylor Rose","Management","PM"]
+ ];
+ for(const [id,name,team,shift] of additions)if(!state.dxEmployees.some(x=>x.id===id))state.dxEmployees.push({id,name,team,shift,available:true});
+ // Older versions stored generic names, not employee assignments. Don't display these as actual owners.
+ for(const t of state.tickets){
+  const employee=state.dxEmployees.find(e=>e.id===t.employeeId);
+  if(employee){t.assignee=employee.name}
+  else {t.employeeId=null;t.assignee="Unassigned";t.acknowledgedAt=null}
+ }
+ save();
+}
+function dcOwner(t){
+ const worker=state.dxEmployees.find(e=>e.id===t.employeeId);
+ return worker?worker.name:"Unassigned";
+}
+function dcAssignmentState(t){
+ if(!t.employeeId)return "Unassigned";
+ return t.acknowledgedAt?"Acknowledged":"Awaiting acknowledgment";
+}
+function dcAssignOptions(t){
+ return state.dxEmployees.filter(e=>e.team===t.team).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function dcAssignModal(id){
+ if(!dxRequire("assign"))return;
+ const t=dxTicket(id);if(!t||["Completed","Voided"].includes(t.status))return flash("Closed ticket cannot be reassigned");
+ const employees=dcAssignOptions(t);
+ const current=t.employeeId||"";
+ const menu='<option value="">Unassigned — department queue</option>'+employees.map(e=>'<option value="'+safe(e.id)+'"'+(current===e.id?" selected":"")+(e.available?"":" disabled")+'>'+safe(e.name)+' · '+safe(e.shift)+' shift'+(e.available?"":" · unavailable")+'</option>').join("");
+ const info=employees.length?'<p class="dc-hint">'+employees.filter(e=>e.available).length+' available team member(s) · Only available '+safe(t.team)+' employees can be selected.</p>':'<div class="alertbox">No employees configured for '+safe(t.team)+'. Leave this ticket in its department queue.</div>';
+ modal("Assign ticket #"+id,'<label>Assigned employee<select name="employee" aria-label="Assigned employee">'+menu+'</select></label>'+info,
+ f=>{
+  const value=String(f.get("employee")||"");
+  if(value===current){closeModal();return}
+  const ok=dxAssign(id,value);
+  if(ok){closeModal();flash(value?"Ticket assigned — acknowledgment pending":"Ticket returned to department queue")}
+ });
+}
+function dcAssignQuick(id){dcAssignModal(id)}
+// Replace the historical "team" assignment callback with the single employee model.
+svcAssign=function(id,value){
+ const employee=state.dxEmployees.find(x=>x.id===value);
+ if(value==="Unassigned"||value===""){dxAssign(id,"");return}
+ if(employee){dxAssign(id,employee.id);return}
+ flash("Choose an employee through the assignment control");
+};
+const dcOldAssign=dxAssign;
+dxAssign=function(id,employeeId){
+ const t=dxTicket(id);
+ if(!t||["Completed","Voided"].includes(t.status))return false;
+ if(employeeId==="Unassigned")employeeId="";
+ const worker=state.dxEmployees.find(x=>x.id===employeeId);
+ if(employeeId&&!worker){flash("Employee not found");return false}
+ if(worker&&worker.team!==t.team){flash("Employee must belong to "+t.team);return false}
+ if(worker&&!worker.available){flash("Selected employee is unavailable");return false}
+ if((t.employeeId||"")===(employeeId||""))return true;
+ return dcOldAssign(id,employeeId);
+};
+function dcFilterSet(value){dcStatus=value;render()}
+function dcMainTab(value){dxTab=value;svcSelected=null;render()}
+function dcQueue(){
+ const tickets=state.tickets.filter(t=>dcStatus==="All"||
+  dcStatus==="Active"?!["Completed","Voided"].includes(t.status):t.status===dcStatus);
+ const q=dxSearch.trim().toLowerCase();
+ const rows=tickets.filter(t=>(dxDepartment==="All"||dxDepartment===t.team)&&
+  (String(t.id)+" "+t.title+" "+t.team+" "+t.location+" "+(t.category||"")+" "+dcOwner(t)).toLowerCase().includes(q));
+ rows.sort((a,b)=>{
+  const pa=(!["Completed","Voided"].includes(a.status)&&Date.parse(a.dueAt)<Date.now())?1:0;
+  const pb=(!["Completed","Voided"].includes(b.status)&&Date.parse(b.dueAt)<Date.now())?1:0;
+  return pb-pa||({"Critical":0,"High":1,"Normal":2,"Low":3}[a.priority]??2)-({"Critical":0,"High":1,"Normal":2,"Low":3}[b.priority]??2)||Date.parse(b.createdAt)-Date.parse(a.createdAt)
+ });
+ const active=state.tickets.filter(x=>!["Completed","Voided"].includes(x.status));
+ const overdue=active.filter(x=>Date.parse(x.dueAt)<Date.now());
+ const counts='<div class="dc-stats"><div class="dc-stat"><strong>'+active.length+'</strong><span>Active</span></div><div class="dc-stat"><strong>'+active.filter(x=>!x.employeeId).length+'</strong><span>Unassigned</span></div><div class="dc-stat"><strong>'+active.filter(x=>x.employeeId&&!x.acknowledgedAt).length+'</strong><span>Awaiting acceptance</span></div><div class="dc-stat"><strong>'+overdue.length+'</strong><span>Past target</span></div></div>';
+ const filters='<div class="dc-filters"><input id="dxSearch" aria-label="Search dispatch" placeholder="Search tickets, guests, rooms..." value="'+safe(dxSearch)+'"><select id="dxDept" aria-label="Department">'+svcOpts(["All",...DX_DEPTS],dxDepartment)+'</select><select id="dcStatus" aria-label="Ticket status">'+svcOpts(["Active","All","Open","Started","Stopped","Completed","Voided"],dcStatus)+'</select></div>';
+ const body=rows.map(t=>{
+  const due=Date.parse(t.dueAt)<Date.now()&&!["Completed","Voided"].includes(t.status);
+  const owner=dcOwner(t),ack=dcAssignmentState(t);
+  return '<div class="dc-ticket"><div><button class="dc-ticket-title" onclick="svcOpen('+t.id+')">#'+t.id+' · '+safe(t.title)+'</button><div class="dc-ticket-sub">'+safe(t.team)+' · '+safe(t.location)+' · '+safe(t.priority)+' priority</div><div class="dc-ticket-sub"><strong class="dc-assignee">'+safe(owner)+'</strong> · '+safe(ack)+(due?' · <span class="dc-overdue">Overdue</span>':"")+'</div></div><div class="dc-ticket-actions">'+svcTag(t)+(dxPermission("assign")&&!["Completed","Voided"].includes(t.status)?'<button class="dc-btn" onclick="dcAssignQuick('+t.id+')">'+(t.employeeId?"Reassign":"Assign")+'</button>':"")+'<button class="dc-btn" onclick="svcOpen('+t.id+')">Details</button></div></div>';
+ }).join("");
+ return counts+panel("Tickets",filters+'<div class="dc-hint" style="margin-bottom:8px">'+rows.length+' tickets shown · New and urgent requests appear first</div>'+(body||'<p class="muted">No matching tickets.</p>'));
+}
+function dcTeam(){
+ const employees=state.dxEmployees.slice().sort((a,b)=>a.team.localeCompare(b.team)||a.name.localeCompare(b.name));
+ return panel("On-duty team",'<div class="dc-hint" style="margin-bottom:11px">Availability and shifts are illustrative. Changes affect this browser only.</div>'+employees.map(e=>{
+ const assigned=state.tickets.filter(t=>t.employeeId===e.id&&!["Completed","Voided"].includes(t.status));
+ return '<div class="dc-employee"><div><strong>'+safe(e.name)+' · '+safe(e.team)+'</strong><small>'+safe(e.shift)+' shift · '+assigned.length+' active assignment(s)'+(assigned.filter(t=>!t.acknowledgedAt).length?" · "+assigned.filter(t=>!t.acknowledgedAt).length+" awaiting acceptance":"")+'</small></div><button class="dc-btn" onclick="dxToggleEmployee(\''+e.id+'\')">'+(e.available?"Available":"Unavailable")+'</button></div>';
+ }).join(""));
+}
+function dcHome(){
+ const tabs=[["Queue","Tickets"],["Employees","Team"],["Schedules","Scheduled"],["Analytics","Reports"]];
+ const current=tabs.some(x=>x[0]===dxTab)?dxTab:"Queue";
+ const tabbar='<div class="dc-toolbar"><div class="dc-tabs">'+tabs.map(([key,label])=>'<button class="'+(current===key?"active":"")+'" onclick="dcMainTab(\''+key+'\')">'+label+'</button>').join("")+'</div><button class="dc-btn primary" onclick="dxNewRequest(\'Front Office\')">+ New ticket</button></div>';
+ const content=current==="Queue"?dcQueue():current==="Employees"?dcTeam():current==="Schedules"?dxSchedule():dxAnalytics();
+ return header("Service Dispatch","Hotel-wide requests, assignments and work history.")+tabbar+content+
+ '<div style="margin-top:15px" class="dc-hint">Synthetic preview · employee permissions, notifications and cross-device updates require the private backend.</div>';
+}
+function dcRow(k,v){return '<div class="dc-line"><span>'+safe(k)+'</span><strong>'+safe(v??"—")+'</strong></div>'}
+function dcDetail(){
+ const t=dxTicket(svcSelected);if(!t)return '<button class="dc-btn" onclick="svcBack()">← Tickets</button><p>Ticket not found.</p>';
+ const closed=["Completed","Voided"].includes(t.status);
+ const assignee=dcOwner(t),pending=t.employeeId&&!t.acknowledgedAt;
+ const controls='<div class="dc-assign-card"><strong>'+safe(assignee)+'</strong><p>'+safe(dcAssignmentState(t))+' · '+safe(t.team)+'</p></div>'+
+ '<div class="dxactions">'+(!closed&&dxPermission("assign")?'<button class="dc-btn" onclick="dcAssignModal('+t.id+')">'+(t.employeeId?"Reassign":"Assign employee")+'</button><button class="dc-btn" onclick="dxAutoAssign('+t.id+')">Auto-assign</button>':"")+
+ (pending?'<button class="dc-btn primary" onclick="dxAck('+t.id+')">Acknowledge</button>':"")+'</div>'+
+ '<div class="dxactions" style="margin-top:14px">'+
+ (["Open","Stopped"].includes(t.status)?'<button class="dc-btn primary" onclick="svcAction('+t.id+',\'Start\')">Start work</button>':"")+
+ (t.status==="Started"?'<button class="dc-btn" onclick="svcAction('+t.id+',\'Stop\')">Stop</button><button class="dc-btn primary" onclick="svcAction('+t.id+',\'Complete\')">Complete</button>':"")+
+ (!closed?'<button class="dc-btn" onclick="svcAction('+t.id+',\'Void\')">Void</button>':"")+
+ (t.status==="Completed"?'<button class="dc-btn" onclick="dxReopenPrompt('+t.id+')">Reopen</button>':"")+'</div>'+
+ '<div class="dc-fields"><label>Priority<select onchange="svcPriority('+t.id+',this.value)"'+(closed?" disabled":"")+'>'+svcOpts(SVC_PRIORITIES,t.priority)+'</select></label></div>'+
+ '<div class="dc-hint" style="margin-top:12px">Start, Stop, Complete and Void are recorded in the ticket history. Completion, Stop and Void require documentation.</div>';
+ const work=panel("Request",dcRow("Department",t.team)+dcRow("Category",t.category)+dcRow("Location",t.location)+dcRow("Priority",t.priority)+dcRow("Created",svcTime(t.createdAt))+dcRow("Target",svcTime(t.dueAt))+dcRow("Status",t.status)+
+ '<p class="muted" style="padding:14px 0 4px;line-height:1.6">'+safe(t.description||"")+'</p>'+
+ (t.resolution?'<div class="alertbox" style="margin-top:10px">Resolution: '+safe(t.resolution)+'</div>':"")+
+ (t.voidReason?'<div class="alertbox" style="margin-top:10px">Void reason: '+safe(t.voidReason)+'</div>':""));
+ const record=panel("History and notes",
+ '<textarea id="svcNote" class="svcnote" placeholder="Add a shift handoff or progress note"></textarea><div style="margin:10px 0 16px"><button class="dc-btn" onclick="svcAddNote('+t.id+')">Add note</button></div>'+
+ [...(t.notes||[]).map(n=>({event:"Note",note:n.text,at:n.at,by:n.by})),...(t.history||[])].sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)).map(e=>'<div class="dxlog"><strong>'+safe(e.event)+'</strong><small>'+svcTime(e.at)+' · '+safe(e.by||"Demo operator")+'</small><div>'+safe(e.note||"")+'</div></div>').join(""));
+ const linked=(t.links||[]).map(id=>'<button class="dc-btn" onclick="svcOpen('+id+')">#'+id+'</button>').join("");
+ const extras=panel("Related work and attachments",'<div class="dxactions"><button class="dc-btn" onclick="dxCreateLinkedPrompt('+t.id+')">+ Linked ticket</button>'+linked+'</div>'+
+ '<div class="dc-hint" style="margin-top:12px">Attachments store file metadata only in this public demo. Do not upload sensitive information.</div>'+
+ '<input type="file" id="dxFile" accept="image/*,.pdf" onchange="dxAttach('+t.id+',this)" style="margin-top:12px;max-width:100%">'+
+ (t.attachments||[]).map(x=>'<div class="dc-line"><span>'+safe(x.name)+'</span><strong>'+Math.round(x.bytes/1024)+' KB</strong></div>').join(""));
+ return '<div class="dc-detail-head"><button class="dc-btn" onclick="svcBack()">← All tickets</button></div>'+
+ header("Ticket #"+t.id,t.title+" · "+t.location)+
+ '<div class="dc-details">'+work+panel("Assignment and actions",controls)+'</div>'+
+ '<div class="dc-details dc-detail-footer">'+record+extras+'</div>';
+}
+// Replace the nested legacy detail view and duplicate assignment panels.
+services=function(){return svcSelected!==null?dcDetail():dcHome()};
+dcStaffBootstrap();
 
 render();
 </script></body></html>
