@@ -699,5 +699,53 @@ if(typeof window!=="undefined" && typeof window.addEventListener==="function"){
  });
 }
 
+
+/* Dispatch 2.1: queue-aware auto-dispatch, ticket reopening and notification preview */
+function dxAutoAssign(id){
+ if(!dxRequire("assign"))return false;
+ const t=dxTicket(id);
+ if(!t||["Voided","Completed"].includes(t.status))return false;
+ const candidates=state.dxEmployees.filter(e=>e.team===t.team&&e.available);
+ if(!candidates.length){flash("No available employees in "+t.team);return false}
+ const load=e=>state.tickets.filter(x=>x.employeeId===e.id&&!["Voided","Completed"].includes(x.status)).length;
+ candidates.sort((a,b)=>load(a)-load(b)||a.id.localeCompare(b.id));
+ return dxAssign(t.id,candidates[0].id);
+}
+function dxAutoDispatchQueue(){
+ if(!dxRequire("assign"))return;
+ let count=0;
+ for(const t of state.tickets.filter(x=>["Open","Stopped"].includes(x.status)&&!x.employeeId)){
+   const worker=state.dxEmployees.filter(e=>e.team===t.team&&e.available).sort((a,b)=>a.id.localeCompare(b.id))[0];
+   if(worker && dxAutoAssign(t.id))count++;
+ }
+ render();flash(count+" tickets automatically assigned in demo");
+}
+function dxReopen(id,note){
+ if(!dxRequire("escalate"))return false;
+ const t=dxTicket(id);
+ if(!t||t.status!=="Completed"){flash("Only completed tickets may be reopened");return false}
+ if(!String(note||"").trim()){flash("Reopen reason required");return false}
+ t.status="Open";t.reopenedAt=new Date().toISOString();t.resolution=null;
+ t.employeeId=null;t.acknowledgedAt=null;t.assignee="Unassigned";
+ dxEvent(t,"Reopened",String(note).trim());render();flash("Ticket reopened");return true;
+}
+function dxReopenPrompt(id){
+ modal("Reopen completed ticket",'<label>Reason for reopening<input name="reason" required placeholder="Issue not fully resolved"></label>',
+ f=>{if(dxReopen(id,String(f.get("reason")||"")))closeModal()});
+}
+function dxNotificationPermission(){
+ if(typeof Notification==="undefined"){flash("Browser notifications unavailable here");return}
+ if(Notification.permission==="granted"){new Notification("Hestia Dispatch demo",{body:"Notifications are available on this browser; cross-device push is not connected."});return}
+ Notification.requestPermission().then(status=>{flash(status==="granted"?"Demo notifications enabled":"Notification permission not granted")});
+}
+const dxPriorBoard=dxBoard;
+dxBoard=function(){
+ return '<div class="dxactions" style="margin:0 0 12px"><button onclick="dxNewRequest(\'Front Office\')">+ Create ticket</button><button onclick="dxAutoDispatchQueue()">Auto-dispatch available staff</button><button onclick="dxNotificationPermission()">Enable browser notification preview</button></div>'+dxPriorBoard();
+};
+const dxPriorDetailAddon=dxDetailAddon;
+dxDetailAddon=function(t){
+ return dxPriorDetailAddon(t)+'<div class="dxsection">'+panel("Dispatch lifecycle",'<div class="dxactions"><button onclick="dxAutoAssign('+t.id+')">Auto-assign available employee</button>'+(t.status==="Completed"?'<button onclick="dxReopenPrompt('+t.id+')">Reopen completed ticket</button>':"")+'</div><p class="hint" style="margin-top:10px">Voided tickets remain terminal. Reopening preserves the audit record and requires a documented reason. Notification previews are browser-local; they are not staff mobile push alerts.</p>')+'</div>';
+};
+
 render();
 </script></body></html>
