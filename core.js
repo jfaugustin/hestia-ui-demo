@@ -162,7 +162,7 @@ function overview(){
  const occupancy=Math.round((active.length/state.rooms.length)*1000)/10;
  const arrivals=state.reservations.filter(r=>r.arrival===DEMO_DATE&&r.status!=="Cancelled").length;
  const open=state.tickets.filter(t=>!["Completed","Voided"].includes(t.status)).length;
- const roomRevenue=state.reservations.filter(r=>r.status!=="Cancelled").reduce((sum,r)=>sum+r.folio.filter(x=>x.type==="Charge"&&x.description.startsWith("Room charges")).reduce((n,x)=>n+x.amount,0),0);
+ const roomRevenue=state.reservations.filter(r=>r.status!=="Cancelled").reduce((sum,r)=>sum+(r.folio||[]).filter(x=>x.type==="Charge"&&String(x.description||"").startsWith("Room charges")).reduce((n,x)=>n+x.amount,0),0);
  const levels=Array.from({length:7},(_,i)=>{
    const day=datePlus(DEMO_DATE,i-6);
    return Math.round(100*state.reservations.filter(r=>r.arrival<=day&&r.departure>day&&!["Cancelled"].includes(r.status)).length/state.rooms.length)
