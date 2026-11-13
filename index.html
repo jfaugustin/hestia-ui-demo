@@ -15,6 +15,23 @@
 .alertbox{background:#fff5e8;border:1px solid #edd5af;color:#815826;padding:13px;border-radius:9px;font-size:12px;line-height:1.6}
 .money{font-variant-numeric:tabular-nums}.danger{color:#a84d48}.balance{font:28px Georgia,serif;color:#203a49}.hint{font-size:11px;color:#7b8d99;line-height:1.6}.tablebtn{font-size:12px;text-align:left;background:none;border:0;color:#966e40;text-decoration:underline}
 @media(max-width:700px){.detailgrid{grid-template-columns:1fr}.statstrip{grid-template-columns:repeat(3,1fr)}.resultbar input{min-width:100%}}
+
+/* Hestia Service Dispatch: individual ticket lifecycle and audit */
+.svcstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.svcstat{background:#fff;border:1px solid #e6e9ec;border-radius:11px;padding:14px}
+.svcstat strong{display:block;font:29px Georgia,serif;color:#243b4b;margin-top:6px}.svcstat span{font-size:11px;color:#83919d}
+.svcbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-bottom:13px}
+.svcbar input,.svcbar select{font:inherit;font-size:12px;flex:1;min-width:115px;border-radius:8px;padding:10px;border:1px solid #d9e1e6;background:#fff;color:#233a4b}
+.svcbar input{flex:2;min-width:210px}.svcrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 0;border-top:1px solid #edf0f2}
+.svcrow:first-child{border-top:0}.svcmain{min-width:0;flex:1}.svctitle{background:transparent;border:0;padding:0;color:#a27545;text-align:left;text-decoration:underline;text-underline-offset:3px;font-weight:700;font-size:13px}
+.svcmeta{font-size:11px;color:#82909e;line-height:1.6;margin-top:5px}.svcright{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:5px}
+.svcpriority{display:inline-block;padding:4px 7px;border-radius:5px;font-size:10px;font-weight:750;background:#e9eef3;color:#536c7e}
+.svcpriority.Critical{background:#f9e1df;color:#ae4039}.svcpriority.High{background:#fff0dc;color:#9c6426}.svcpriority.Low{background:#e7f3e9;color:#3c7953}
+.svcgrid{display:grid;grid-template-columns:1.2fr 1fr;gap:15px}.svcdetailrow{display:flex;justify-content:space-between;gap:18px;padding:12px 0;border-bottom:1px solid #edf0f2;font-size:12px}.svcdetailrow span{color:#84919b}.svcdetailrow strong{text-align:right;overflow-wrap:anywhere}
+.svcselect{width:100%;padding:10px;border:1px solid #dbe2e7;border-radius:8px;background:#fff;color:#243848}.svcnote{width:100%;min-height:88px;padding:12px;border:1px solid #dae2e7;border-radius:9px;font:13px inherit;resize:vertical}
+.svclog{border-top:1px solid #e8edf0;padding:10px 0;font-size:12px}.svclog small{display:block;color:#84929f;margin-top:4px}.svclog p{margin-top:6px;color:#4f6271;white-space:pre-wrap}
+@media(max-width:750px){.svcstats{grid-template-columns:repeat(2,1fr)}.svcgrid{grid-template-columns:1fr}.svcbar input{min-width:100%}.svcrow{align-items:flex-start}.svcright{flex-direction:column;align-items:flex-end}}
+
 </style></head><body>
 <div class="mobileoverlay" id="overlay" onclick="toggleMenu(false)"></div><div class="shell"><aside class="sidebar" id="sidebar"><div class="brand">HESTIA</div><div class="tagline">HOTEL OPERATING SYSTEM</div><nav class="nav" id="nav"></nav><div class="sidefoot">DEMONSTRATION ENVIRONMENT<br>Synthetic data only · Stored in this browser<br><button class="secondary" style="margin-top:9px" onclick="resetDemo()">Reset demo</button></div></aside>
 <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="menu" onclick="toggleMenu(true)">☰</button><div><div class="prop">Grand Hotel <span style="font-weight:400;color:#8494a1">/ Demo Property</span></div><div class="tiny">Independent luxury hotel · 120 rooms</div></div></div><div class="topright"><span class="desktop subtle">Business date · November 12, 2026</span><span>◉</span><div class="avatar">HM</div></div></header><div class="content" id="content"></div></main></div><div id="modalroot"></div>
@@ -195,6 +212,146 @@ render=function(){
 }
 NAV.splice(2,0,["Guests","♧"]);
 enrichDemo();
+
+
+/* Hestia service ticket lifecycle: prototype-only; persistent in browser localStorage */
+const SVC_STATUS=["Open","Started","Stopped","Completed","Voided"];
+const SVC_PRIORITIES=["Critical","High","Normal","Low"];
+const SVC_TEAMS=["Engineering","Housekeeping","Guest Services","Security","Front Office","IT","Food & Beverage","Management"];
+let svcSelected=null,svcFilter="Active",svcQuery="";
+const svcTime=v=>v?new Date(v).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"—";
+function svcSeed(){
+ if(!Array.isArray(state.tickets))state.tickets=[];
+ state.tickets.forEach((t,i)=>{
+  if(t.status==="In progress")t.status="Started";
+  if(t.status==="Complete")t.status="Completed";
+  if(t.status==="Cancelled")t.status="Voided";
+  if(t.status==="On hold")t.status="Stopped";
+  if(t.status==="Assigned")t.status="Open";
+  if(!SVC_STATUS.includes(t.status))t.status="Open";
+  if(!t.priority)t.priority=["Normal","High","Low","Critical"][i%4];
+  if(!t.assignee)t.assignee=i%3===0?"Unassigned":t.team+" team";
+  if(!t.location)t.location=t.room?"Room "+t.room:"Public area";
+  if(!t.createdAt)t.createdAt=new Date(Date.now()-(i+1)*3600000).toISOString();
+  if(!Array.isArray(t.notes))t.notes=[];
+  if(!Array.isArray(t.history))t.history=[{event:"Created",note:"Ticket entered in queue",at:t.createdAt,by:"Demo system"}];
+  if(!t.description)t.description="Synthetic service request: "+t.title;
+  if(!t.category)t.category=t.team==="Housekeeping"?"Housekeeping":t.team==="Security"?"Safety & Security":"Maintenance";
+ });
+ save();
+}
+function svcRecord(t,event,note){
+ const at=new Date().toISOString();
+ t.history.push({at,event,note:note||"",by:"Demo operator"});
+ activity("Service #"+t.id+" · "+event);
+ save();
+}
+function svcChange(id,action,note){
+ const t=state.tickets.find(x=>x.id===Number(id));
+ if(!t)return false;
+ const allowed={Start:["Open","Stopped"],Stop:["Started"],Complete:["Started"],Void:["Open","Stopped","Started"]};
+ if(!(allowed[action]||[]).includes(t.status)){flash("Action unavailable for a "+t.status.toLowerCase()+" ticket");return false;}
+ if(["Stop","Complete","Void"].includes(action)&&!String(note||"").trim()){flash("A reason or resolution is required");return false;}
+ if(action==="Start"){t.status="Started";t.startedAt=new Date().toISOString();}
+ if(action==="Stop"){t.status="Stopped";t.stoppedAt=new Date().toISOString();}
+ if(action==="Complete"){t.status="Completed";t.completedAt=new Date().toISOString();t.resolution=String(note).trim();}
+ if(action==="Void"){t.status="Voided";t.voidedAt=new Date().toISOString();t.voidReason=String(note).trim();}
+ svcRecord(t,action==="Start"?"Started":action==="Stop"?"Stopped":action==="Complete"?"Completed":"Voided",String(note||""));
+ render();flash("Ticket #"+id+" "+t.status.toLowerCase());
+ return true;
+}
+function svcAction(id,action){
+ if(action==="Start"){svcChange(id,action,"Work started");return;}
+ modal(action+" ticket #"+id,
+ '<label>'+(action==="Complete"?"Resolution / work performed":action==="Stop"?"Reason for stopping":"Reason for voiding")+
+ '<input name="note" required placeholder="Document the action"></label>',
+ f=>{if(svcChange(id,action,String(f.get("note")||"")))closeModal()});
+}
+function svcAddNote(id){
+ const t=state.tickets.find(x=>x.id===Number(id));
+ const el=document.getElementById("svcNote");
+ const value=String(el?.value||"").trim();
+ if(!t||!value)return flash("Enter a note");
+ t.notes.push({at:new Date().toISOString(),by:"Demo operator",text:value});
+ svcRecord(t,"Note added","Internal note recorded");
+ render();flash("Note added");
+}
+function svcAssign(id,value){
+ const t=state.tickets.find(x=>x.id===Number(id));
+ if(!t||["Completed","Voided"].includes(t.status))return flash("Closed tickets cannot be edited");
+ if(!String(value).trim())return flash("Choose an assignee");
+ const before=t.assignee;t.assignee=value;
+ svcRecord(t,"Assignment changed",before+" → "+value);render();
+}
+function svcPriority(id,value){
+ const t=state.tickets.find(x=>x.id===Number(id));
+ if(!t||!SVC_PRIORITIES.includes(value)||["Completed","Voided"].includes(t.status))return;
+ const before=t.priority;t.priority=value;
+ svcRecord(t,"Priority changed",before+" → "+value);render();
+}
+function svcOpts(items,selected){return items.map(x=>'<option value="'+safe(x)+'"'+(x===selected?" selected":"")+'>'+safe(x)+'</option>').join("")}
+function svcTag(t){return '<span class="badge '+(t.status==="Completed"?"good":t.status==="Voided"?"bad":t.status==="Stopped"?"warn":"")+'">'+safe(t.status)+'</span>'}
+function svcButtons(t){
+ let actions=[];
+ if(["Open","Stopped"].includes(t.status))actions.push("Start");
+ if(t.status==="Started")actions.push("Stop","Complete");
+ if(["Open","Started","Stopped"].includes(t.status))actions.push("Void");
+ return '<div class="actions">'+actions.map(a=>'<button class="secondary" onclick="svcAction('+t.id+',\''+a+'\')">'+a+'</button>').join("")+'</div>';
+}
+function svcOpen(id){svcSelected=Number(id);page="Service Dispatch";render();window.scrollTo?.(0,0)}
+function svcBack(){svcSelected=null;render()}
+function svcTicketDetail(){
+ const t=state.tickets.find(x=>x.id===svcSelected);
+ if(!t){svcSelected=null;return panel("Ticket not found","No matching service record")}
+ const data=(k,v)=>'<div class="svcdetailrow"><span>'+safe(k)+'</span><strong>'+safe(v)+'</strong></div>';
+ const selectAssignee=["Unassigned","Engineering team","Housekeeping team","Guest Services team","Security team","Front Office team","IT team","F&B team","Management team"];
+ if(!selectAssignee.includes(t.assignee))selectAssignee.push(t.assignee);
+ const controls=panel("Ticket controls",'<label class="ticket-field-label">Assigned to</label><select class="svcselect" aria-label="Ticket assignee" onchange="svcAssign('+t.id+',this.value)">'+svcOpts(selectAssignee,t.assignee)+'</select><label class="ticket-field-label" style="display:block;margin:14px 0 5px">Priority</label><select class="svcselect" aria-label="Ticket priority" onchange="svcPriority('+t.id+',this.value)">'+svcOpts(SVC_PRIORITIES,t.priority)+'</select><div style="margin-top:17px">'+svcButtons(t)+'</div><p class="hint" style="margin-top:13px">Start begins work. Stop pauses it. Complete requires a resolution. Void requires a reason. Every action remains in the ticket history.</p>');
+ return '<div class="actions" style="margin-bottom:14px"><button class="secondary" onclick="svcBack()">← All tickets</button>'+svcTag(t)+'</div>'+
+ header("Ticket #"+t.id,t.title+" · "+t.location)+
+ '<div class="svcgrid">'+panel("Work order details",data("Department",t.team)+data("Category",t.category)+data("Location",t.location)+data("Room",t.room||"—")+data("Status",t.status)+data("Priority",t.priority)+data("Assigned to",t.assignee)+data("Created",svcTime(t.createdAt))+data("Started",svcTime(t.startedAt))+data("Stopped",svcTime(t.stoppedAt))+data("Completed",svcTime(t.completedAt))+data("Voided",svcTime(t.voidedAt))+'<p class="muted" style="padding-top:15px;line-height:1.6">'+safe(t.description)+'</p>'+(t.resolution?'<div class="alertbox" style="margin-top:12px">Resolution: '+safe(t.resolution)+'</div>':"")+(t.voidReason?'<div class="alertbox" style="margin-top:12px">Void reason: '+safe(t.voidReason)+'</div>':""))+controls+'</div>'+
+ '<div class="svcgrid" style="margin-top:15px">'+panel("Internal notes",'<textarea class="svcnote" id="svcNote" placeholder="Add a handoff, progress note, or guest communication..."></textarea><div style="margin:11px 0"><button class="primary" onclick="svcAddNote('+t.id+')">Add note</button></div>'+t.notes.slice().reverse().map(n=>'<div class="svclog"><strong>'+safe(n.by)+'</strong><small>'+svcTime(n.at)+'</small><p>'+safe(n.text)+'</p></div>').join(""))+
+ panel("Ticket audit history",t.history.slice().reverse().map(h=>'<div class="svclog"><strong>'+safe(h.event)+'</strong><small>'+svcTime(h.at)+' · '+safe(h.by)+'</small><p>'+safe(h.note)+'</p></div>').join(""))+'</div>';
+}
+services=function(){
+ if(svcSelected!==null)return svcTicketDetail();
+ const active=state.tickets.filter(t=>!["Completed","Voided"].includes(t.status));
+ const filtered=state.tickets.filter(t=>(svcFilter==="All"||svcFilter==="Active"&&!["Completed","Voided"].includes(t.status)||svcFilter===t.status)&&
+ (t.title+" "+t.id+" "+t.location+" "+t.team+" "+t.assignee).toLowerCase().includes(svcQuery.toLowerCase()));
+ return header("Service Dispatch","Assign, start, stop, complete, or void hotel service tickets.",'<button class="primary" onclick="openTicket()">+ New ticket</button>')+
+ '<div class="svcstats">'+
+ '<div class="svcstat"><span>Active tickets</span><strong>'+active.length+'</strong></div>'+
+ '<div class="svcstat"><span>Started</span><strong>'+state.tickets.filter(t=>t.status==="Started").length+'</strong></div>'+
+ '<div class="svcstat"><span>Stopped</span><strong>'+state.tickets.filter(t=>t.status==="Stopped").length+'</strong></div>'+
+ '<div class="svcstat"><span>Completed</span><strong>'+state.tickets.filter(t=>t.status==="Completed").length+'</strong></div></div>'+
+ panel("Ticket queue",'<div class="svcbar"><input id="svcSearch" aria-label="Search tickets" placeholder="Search ticket, room, assignee..." value="'+safe(svcQuery)+'"><select id="svcFilter" aria-label="Filter ticket status">'+svcOpts(["Active","All",...SVC_STATUS],svcFilter)+'</select></div>'+
+ '<div class="muted" style="font-size:11px;margin-bottom:10px">'+filtered.length+' matching tickets</div>'+
+ (filtered.length?filtered.map(t=>'<div class="svcrow"><div class="svcmain"><button class="svctitle" onclick="svcOpen('+t.id+')">#'+t.id+' · '+safe(t.title)+'</button><div class="svcmeta">'+safe(t.location)+' · '+safe(t.team)+' · '+safe(t.assignee)+' · '+svcTime(t.createdAt)+'</div></div><div class="svcright">'+svcTag(t)+'<span class="svcpriority '+safe(t.priority)+'">'+safe(t.priority)+'</span><button class="secondary" onclick="svcOpen('+t.id+')">Details</button></div></div>').join(""):'<div class="empty">No matching tickets.</div>'));
+};
+openTicket=function(){
+ modal("New service ticket",field("Request summary","title")+
+ '<label>Location<input name="location" required placeholder="Room 814, Lobby, B1..."></label>'+
+ '<label>Department<select name="team">'+svcOpts(SVC_TEAMS,"Engineering")+'</select></label>'+
+ '<label>Priority<select name="priority">'+svcOpts(SVC_PRIORITIES,"Normal")+'</select></label>'+
+ '<label>Request description<input name="description" required placeholder="What needs to be done?"></label>',f=>{
+  const title=String(f.get("title")||"").trim(),location=String(f.get("location")||"").trim(),description=String(f.get("description")||"").trim();
+  if(!title||!location||!description)return flash("All ticket fields are required");
+  const id=Math.max(45000,...state.tickets.map(x=>Number(x.id)||0))+1;
+  const roomMatch=location.match(/\b\d{3,4}\b/);
+  const ticket={id,title,location,room:roomMatch?Number(roomMatch[0]):null,description,team:String(f.get("team")),priority:String(f.get("priority")),assignee:"Unassigned",category:"Guest request",status:"Open",createdAt:new Date().toISOString(),notes:[],history:[]};
+  state.tickets.unshift(ticket);svcRecord(ticket,"Created","Ticket created");
+  svcSelected=id;closeModal();render();flash("New ticket #"+id+" created");
+ });
+};
+svcSeed();
+const svcPreviousRender=render;
+render=function(){
+ svcPreviousRender();
+ if(page!=="Service Dispatch")return;
+ const search=document.getElementById("svcSearch"),filter=document.getElementById("svcFilter");
+ if(search)search.oninput=e=>{svcQuery=e.target.value;const pos=e.target.selectionStart;render();const input=document.getElementById("svcSearch");input?.focus();input?.setSelectionRange?.(pos,pos)};
+ if(filter)filter.onchange=e=>{svcFilter=e.target.value;render()};
+};
 
 render();
 </script></body></html>
