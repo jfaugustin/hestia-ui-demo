@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'front-office.js'
+      - 'front-office.css'
       - 'sw.js'
       - '.github/workflows/deploy.yml'
       - 'tests/**'
@@ -25,7 +27,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Verify Hestia demo workflows
-        run: node tests/demo-smoke.cjs
+        run: |
+          node tests/demo-smoke.cjs
+          node tests/front-office-smoke.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
