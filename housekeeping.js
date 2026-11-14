@@ -447,3 +447,4 @@ function hkRoleActions(job,r){
 }
 
 hkSeed();
+render();
