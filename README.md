@@ -10,12 +10,13 @@ The site is served as a static application from GitHub Pages. The entrypoint is 
 
 | File | Responsibility |
 |---|---|
-| `index.html` | Document shell and versioned module loading only |
+| `index.html` | Document shell, branded sidebar and versioned module loading only |
+| `logo.svg` | Architectural H monogram, shared by sidebar and browser favicon |
 | `core.js` | Sample data initialization, reservation details, folios, dispatch state machine, security and financial demo workflows |
 | `core.css` | Shared visual elements and existing operation component styles |
 | `front-office.js` | Guest-service catalog, specialized request forms, linked department workflows |
 | `front-office.css` | Responsive Front Office service workspace |
-| `app-shell.js` | **One** nine-section navigation model, overview, shared Rooms inventory and Operations |
+| `app-shell.js` | Authoritative single-pass renderer, nine-section navigation, overview, shared Rooms inventory and Operations |
 | `app-shell.css` | Compact responsive design system |
 | `housekeeping.js` | Role-specific Housekeeping views, workload allocation, inspection checklists, guest preferences, Engineering holds, supplies, and passdowns |
 | `housekeeping.css` | Housekeeping-specific responsive workspace |
@@ -29,7 +30,7 @@ Housekeeping remains a standalone department. An attendant sees assigned rooms; 
 
 ## Engineering conventions
 
-1. **Do not append another overriding renderer.** Improve the authoritative function in its owning module, and remove superseded code.
+1. **One production render path:** `app-shell.js` owns the live demo renderer. Keep other modules focused on data and views; do not add a chained renderer or trigger a separate initial paint.
 2. **One assignment function and one ticket lifecycle.** The `core.js` dispatch functions are authoritative within this demo.
 3. **Keep guest service templates in `front-office.js`**, not in a second dispatch engine. Specialized requests share statuses, audit trails and assignment controls.
 4. **Keep navigation in `app-shell.js`**. Departmental interfaces (including Housekeeping) remain distinct; contextual tabs support workflows within departments.
@@ -38,16 +39,17 @@ Housekeeping remains a standalone department. An attendant sees assigned rooms; 
 
 ## Automated checks
 
-The GitHub Actions Pages workflow must pass all four scripts before publishing:
+The GitHub Actions Pages workflow must pass all five scripts before publishing:
 
 ```sh
 node tests/demo-smoke.cjs
 node tests/front-office-smoke.cjs
 node tests/app-shell-smoke.cjs
 node tests/housekeeping-smoke.cjs
+node tests/brand-startup-smoke.cjs
 ```
 
-These validate JavaScript execution, reservations/folios, ticket transitions, guest service templates, Housekeeping assignments and inspections, checkout-to-cleaning coordination, and the departmental navigation. They are **not** browser-device, security, concurrency or production load tests.
+These validate JavaScript execution, reservations/folios, ticket transitions, guest service templates, Housekeeping assignments and inspections, checkout-to-cleaning coordination, departmental navigation, the logo assets, and exactly one DOM render on startup and per navigation action. They are **not** browser-device, security, concurrency or production load tests.
 
 ## Hosting and mobile
 
