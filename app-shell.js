@@ -161,4 +161,4 @@ resetDemo=function(){
  h4RoomFilter="All";h4RoomMode="Rooms";h4StayMode="Reservations";h4OpsMode="Summary";
  page="Overview";save();render();flash("Demo reset to sample data");
 };
-render();
+// Final bootstrap renders the full application after Housekeeping initializes.
