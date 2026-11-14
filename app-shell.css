@@ -16,3 +16,16 @@
 @media(max-width:1050px){.h4-grid{grid-template-columns:1fr}.h4-roomset{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media(max-width:700px){.shell .sidebar{width:245px}.main .topbar{padding:0 15px;height:60px}.main .content{padding:18px 13px}.h4-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.h4-metric{padding:13px}.h4-metric strong{font-size:24px}.h4-card{padding:13px}.h4-hero{align-items:start}.h4-hero h1{font-size:26px}.h4-actions{justify-content:flex-end}.h4-actions .h4-btn{padding:9px 10px}.h4-roomset{grid-template-columns:repeat(3,minmax(0,1fr))}.h4-filter input{min-width:100%}.content .grid{grid-template-columns:repeat(2,minmax(0,1fr))}.content .statstrip{grid-template-columns:repeat(3,minmax(0,1fr))}.content .statstrip strong{font-size:17px}.content .statstrip>div{padding:9px}.modal{max-height:calc(100dvh - 30px);overflow:auto;padding:18px}.fields{gap:10px}.h4-tabs{margin-bottom:13px}}
 @media(max-width:400px){.h4-hero{flex-direction:column}.h4-actions{justify-content:flex-start}.h4-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Shared brand lockup: legible at desktop and phone sizes. */
+.shell .brand-lockup{display:flex;align-items:center;gap:10px;margin:3px 5px 20px;min-width:0}
+.shell .brand-symbol{display:block;width:44px;height:44px;flex:0 0 44px;border-radius:10px}
+.shell .brand-copy{min-width:0;display:flex;flex-direction:column;justify-content:center}
+.shell .brand-lockup .brand{font-size:24px;letter-spacing:2.4px;line-height:1.15;margin:0;color:#f7f1e7}
+.shell .brand-lockup .tagline{font-size:8px;letter-spacing:1.15px;white-space:nowrap;margin:4px 0 0;color:#b6c4cc}
+@media(max-width:560px){
+ .shell .brand-lockup{gap:9px;margin:2px 4px 16px}
+ .shell .brand-symbol{width:40px;height:40px;flex-basis:40px}
+ .shell .brand-lockup .brand{font-size:22px}
+ .shell .brand-lockup .tagline{font-size:7.5px}
+}
