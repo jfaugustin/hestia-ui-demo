@@ -3,7 +3,7 @@ const vm=require("node:vm");
 const assert=require("node:assert/strict");
 const html=fs.readFileSync("index.html","utf8");
 const extension=fs.readFileSync("front-office.js","utf8");
-assert.ok(html.includes('src="./front-office.js?v=5"'),"Front Office module must be loaded");
+assert.ok(html.includes('src="./front-office.js?v=6"'),"Front Office module must be loaded");
 assert.ok(html.includes('href="./front-office.css?v=4"'),"Front Office stylesheet must be loaded");
 new vm.Script(extension,{filename:"front-office.js"});
 const elements={};
