@@ -1,6 +1,6 @@
 const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/strict");
 const html=fs.readFileSync("index.html","utf8");
-for(const asset of ["housekeeping.js?v=4","housekeeping.css?v=2","app-shell.js?v=7"])
+for(const asset of ["housekeeping.js?v=5","housekeeping.css?v=2","app-shell.js?v=8"])
  assert.ok(html.includes(asset),"Housekeeping release asset "+asset);
 const sources=["core.js","front-office.js","app-shell.js","housekeeping.js"].map(p=>fs.readFileSync(p,"utf8"));
 const el={};
