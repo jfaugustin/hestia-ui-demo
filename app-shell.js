@@ -101,34 +101,49 @@ function h4Page(){
  if(["Operations","Workforce","Intelligence"].includes(page))return h4OpsPage();
  return null;
 }
-const h4PreviousRender=render;
+// A single render path for the complete website; do not chain the legacy
+// renderers (which previously populated and replaced the same DOM twice).
 render=function(){
- let oldPage=page;
- // The legacy renderer has no Operations view. Use a valid temporary view without mutating persisted state.
- if(page==="Operations")page="Overview";
- h4PreviousRender();
- page=oldPage;
  const override=h4Page();
- if(override!==null)document.getElementById("content").innerHTML=override+'<div class="footer">HESTIA · Synthetic data · Public interactive preview</div>';
+ let markup=override;
+ if(markup===null){
+  const views={"Front Desk":desk,"Service Dispatch":services,"Security":security,"Financials":finances};
+  if(page==="Reservation Detail")markup=detailPage();
+  else markup=(views[page]||h4Overview)();
+ }
+ document.getElementById("content").innerHTML=markup+
+  '<div class="footer">HESTIA · Synthetic data · Public interactive preview</div>';
  document.getElementById("nav").innerHTML=h4MenuMarkup();
  const dt=document.querySelector?.(".topright .desktop");
  if(dt)dt.textContent="Business date · "+DEMO_DATE;
+ // Bind only controls belonging to the currently displayed screen.
+ function searchControl(inputId,update){
+  const input=document.getElementById(inputId);
+  if(!input)return;
+  input.oninput=e=>{
+   update(e.target.value);
+   const caret=e.target.selectionStart;
+   render();
+   const next=document.getElementById(inputId);
+   if(next){next.focus();if(typeof next.setSelectionRange==="function")next.setSelectionRange(caret,caret)}
+  };
+ }
  const roomFilter=document.getElementById("h4RoomFilter");
  if(roomFilter)roomFilter.onchange=e=>{h4RoomFilter=e.target.value;render()};
  const hkFilterInput=document.getElementById("hkFilter");
  if(hkFilterInput)hkFilterInput.onchange=e=>hkSetFilter(e.target.value);
- const hkSearchInput=document.getElementById("hkSearch");
- if(hkSearchInput)hkSearchInput.oninput=e=>{
-  hkSearch=e.target.value;const caret=e.target.selectionStart;render();
-  const next=document.getElementById("hkSearch");
-  if(next){next.focus();next.setSelectionRange(caret,caret)}
- };
- const guestSearch=document.getElementById("reservationSearch")||document.getElementById("guestSearch");
- if(guestSearch)guestSearch.oninput=e=>{
-  reservationSearch=e.target.value;const position=e.target.selectionStart;render();
-  const next=document.getElementById("reservationSearch")||document.getElementById("guestSearch");
-  if(next){next.focus();next.setSelectionRange(position,position)}
- };
+ searchControl("hkSearch",value=>{hkSearch=value});
+ searchControl("fo3Search",value=>{fo3Search=value});
+ const foStatus=document.getElementById("fo3Status");
+ if(foStatus)foStatus.onchange=e=>fo3SetStatus(e.target.value);
+ const guestSearchId=document.getElementById("reservationSearch")?"reservationSearch":"guestSearch";
+ searchControl(guestSearchId,value=>{reservationSearch=value});
+ if(page==="Service Dispatch"&&svcSelected===null){
+  const filter=document.getElementById("dxDept"),status=document.getElementById("dcStatus");
+  if(filter)filter.onchange=e=>{dxDepartment=e.target.value;render()};
+  if(status)status.onchange=e=>dcFilterSet(e.target.value);
+  searchControl("dxSearch",value=>{dxSearch=value});
+ }
 };
 const h4PreviousNav=nav;
 nav=function(next){
