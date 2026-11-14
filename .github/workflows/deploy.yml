@@ -13,6 +13,7 @@ on:
       - 'housekeeping.js'
       - 'housekeeping.css'
       - 'sw.js'
+      - 'logo.svg'
       - '.github/workflows/deploy.yml'
       - 'tests/**'
   workflow_dispatch:
@@ -38,6 +39,7 @@ jobs:
           node tests/front-office-smoke.cjs
           node tests/app-shell-smoke.cjs
           node tests/housekeeping-smoke.cjs
+          node tests/brand-startup-smoke.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
