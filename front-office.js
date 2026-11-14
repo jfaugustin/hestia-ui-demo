@@ -199,4 +199,4 @@ render=function(){
  };
  if(status)status.onchange=e=>fo3SetStatus(e.target.value);
 };
-render();
+// Initial paint happens once, after all departments load.
