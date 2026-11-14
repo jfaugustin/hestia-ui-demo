@@ -57,7 +57,6 @@ function changeReservation(id,status){let r=state.reservations.find(x=>x.id===id
 function cycleRoom(id){if(typeof hkOpenRoom==="function")return hkOpenRoom(id);flash("Room readiness is managed by Housekeeping");return false}
 function markReady(id){if(typeof hkUpdate==="function")return hkUpdate(id,"Approve");flash("Room readiness requires a Housekeeping inspection");return false}
 
-function advanceTicket(id){let t=state.tickets.find(x=>x.id===id);t.status=t.status==="Open"?"In progress":"Complete";activity("Service request #"+id+" · "+t.status);render()}
 function openIncident(){modal("New security incident",field("Incident summary","title")+field("Location","location"),f=>{state.incidents.unshift({id:Date.now(),title:String(f.get("title")).trim(),location:String(f.get("location")).trim(),status:"Open"});activity("Security incident recorded");closeModal();render();flash("Incident recorded")})}
 function resolveIncident(id){state.incidents.find(x=>x.id===id).status="Complete";activity("Incident resolved · #"+id);render()}
 
@@ -285,11 +284,6 @@ function foInit(){
  save();
 }
 
-function foDue(t){
- if(["Completed","Voided"].includes(t.status))return "Closed";
- const m=Math.round((Date.parse(t.dueAt)-Date.now())/60000);
- return m<0?"Overdue "+Math.abs(m)+"m":m===0?"Due now":"Due in "+m+"m";
-}
 function foOpen(id){svcSelected=Number(id);page="Service Dispatch";render()}
 foInit();
 svcSeed();
@@ -400,7 +394,6 @@ function dxProcessEscalations(){
  for(const t of newAlerts){t.escalated=true;t.escalatedAt=new Date().toISOString();dxEvent(t,"SLA escalated","Supervisor review required");}
  render();flash(newAlerts.length+" overdue ticket(s) escalated");return newAlerts.length;
 }
-function dxTeamTag(t){return t.team==="Front Office"&&t.requestType? t.requestType:t.team}
 function dxRecurringRun(id,nowDate){
  if(!dxRequire("schedule"))return false;
  const rule=state.dxRecurring.find(x=>x.id===Number(id));if(!rule||!rule.enabled)return false;
@@ -428,7 +421,6 @@ function dxCreateLinkedPrompt(id){
 function dxFillCats(team){const box=document.getElementById("dxCategorySelect");if(box)box.innerHTML=(DX_CATEGORIES[team]||[]).map(c=>'<option>'+safe(c)+'</option>').join("")}
 function dxSetRole(value){if(!DX_ROLES[value])return;dxRole=value;render()}
 function dxSetTab(value){dxTab=value;render()}
-function dxSetDept(value){dxDepartment=value;render()}
 function dxToggleEmployee(id){if(!dxRequire("assign"))return;const e=state.dxEmployees.find(x=>x.id===id);if(!e)return;e.available=!e.available;save();render()}
 
 function dxSchedule(){
@@ -486,7 +478,6 @@ function svcAction(id,action){if(!dxRequire(action==="Void"?"void":"transition")
  if(action==="Start"){dxTransition(id,action,"Work started");return}
  modal(action+" ticket #"+id,'<label>'+(action==="Complete"?"Resolution":action==="Stop"?"Reason for stopping":"Reason for void")+'<input name="note" required></label>',f=>{if(dxTransition(id,action,String(f.get("note")||"")))closeModal()});
 };
-function openTicket(){dxNewRequest("Engineering")}
 dxBootstrap();
 
 
@@ -590,12 +581,6 @@ function dcAssignModal(id){
 }
 function dcAssignQuick(id){dcAssignModal(id)}
 // Replace the historical "team" assignment callback with the single employee model.
-function svcAssign(id,value){
- const employee=state.dxEmployees.find(x=>x.id===value);
- if(value==="Unassigned"||value===""){dxAssign(id,"");return}
- if(employee){dxAssign(id,employee.id);return}
- flash("Choose an employee through the assignment control");
-};
 function dcFilterSet(value){dcStatus=value;render()}
 function dcMainTab(value){dxTab=value;svcSelected=null;render()}
 function dcQueue(){
