@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+<title>Hestia architectural H monogram</title>
+<rect x="1" y="1" width="62" height="62" rx="15" fill="#142431" stroke="#52606B" stroke-width="1"/>
+<path d="M13 21 32 11l19 10" fill="none" stroke="#D2AD7D" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M19 23v23m26-23v23M19 34.5h26" fill="none" stroke="#F4E9D9" stroke-width="5.5" stroke-linecap="square"/>
+<path d="M15 51h34" fill="none" stroke="#D2AD7D" stroke-width="2.7" stroke-linecap="round"/>
+</svg>
