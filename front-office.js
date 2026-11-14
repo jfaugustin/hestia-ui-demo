@@ -185,8 +185,6 @@ dcDetail=function(){
  return fo3OldDetail()+(t?fo3AddDetail(t):"");
 };
 function desk(){return fo3RequestView()}
-function foNew(kind){return fo3Request(({"Bell Service":"Bell pickup","Live Checkout":"Live checkout","Food Delivery":"IRD delivery"})[kind]||kind)}
-function foFromReservation(id){return fo3Request("Live checkout",Number(id))}
 fo3Seed();
 const fo3OldRender=render;
 render=function(){
