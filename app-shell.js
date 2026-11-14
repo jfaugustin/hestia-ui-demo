@@ -48,7 +48,6 @@ function h4Overview(){
  '<div class="h4-soft" style="margin-top:15px">Demo property · '+state.rooms.length+' sample rooms · no live guest or payment processing</div></div>';
  return h4Hero("Property overview","What needs attention across the hotel.",actions)+overview+'<div class="h4-grid">'+requests+rooms+'</div>';
 }
-function h4SwitchRoom(mode){h4RoomMode=mode;page=mode;render()}
 function h4SwitchStay(mode){h4StayMode=mode;page=mode;render()}
 function h4SwitchOps(mode){h4OpsMode=mode;page=mode==="Summary"?"Operations":mode;render()}
 function h4RoomPage(){
